@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    
+    <!-- Template Principal del Dashboard -->
+    <t t-name="galeria.GallerySelector" owl="1">
+        <div class="o_gallery_selector h-100 d-flex flex-column">
+            <!-- Toolbar -->
+            <div class="o_gallery_toolbar p-3 bg-view d-flex justify-content-between align-items-center border-bottom">
+                <div class="d-flex align-items-center gap-3">
+                    <h3 class="m-0 text-primary">Selector de Placas</h3>
+                    <input type="text" 
+                           class="form-control" 
+                           placeholder="Buscar por Lote..." 
+                           t-on-change="onSearch"/>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted" t-if="isSomethingSelected">
+                        <t t-esc="state.selectedIds.size"/> seleccionados
+                    </span>
+                    <button class="btn btn-primary" 
+                            t-att-disabled="!isSomethingSelected"
+                            t-on-click="createLink">
+                        <i class="fa fa-link me-2"/>Crear Catálogo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid de Imágenes -->
+            <div class="o_gallery_grid p-3 flex-grow-1 overflow-auto">
+                <div class="row g-3">
+                    <t t-foreach="state.images" t-as="img" t-key="img.id">
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div t-attf-class="card h-100 o_gallery_card #{state.selectedIds.has(img.id) ? 'selected border-primary' : ''}"
+                                 t-on-click="() => this.toggleSelection(img.id)">
+                                <div class="card-img-top position-relative" style="height: 150px; overflow: hidden;">
+                                    <img t-att-src="'/web/image/stock.lot.image/' + img.id + '/image_small'"
+                                         class="w-100 h-100 object-fit-cover"/>
+                                    <div class="o_overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                                         t-if="state.selectedIds.has(img.id)">
+                                        <i class="fa fa-check-circle text-white fa-3x"/>
+                                    </div>
+                                </div>
+                                <div class="card-body p-2">
+                                    <h6 class="card-title text-truncate m-0" t-att-title="img.lot_id[1]">
+                                        <t t-esc="img.lot_id[1]"/>
+                                    </h6>
+                                    <small class="text-muted" t-esc="img.name"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Template del Modal -->
+    <t t-name="galeria.CreateLinkDialog" owl="1">
+        <Dialog title="props.title">
+            <div class="p-3">
+                <label class="form-label">Seleccionar Cliente</label>
+                <select class="form-select" t-model="state.partner_id">
+                    <option value="">-- Seleccionar --</option>
+                    <t t-foreach="state.partners" t-as="p" t-key="p.id">
+                        <option t-att-value="p.id"><t t-esc="p.name"/></option>
+                    </t>
+                </select>
+                <p class="text-muted mt-2 small">
+                    Se generará un enlace único con las <t t-esc="props.selectedImages.length"/> imágenes seleccionadas.
+                </p>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="props.close">Cancelar</button>
+                <button class="btn btn-primary" t-on-click="confirm">Generar Link</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

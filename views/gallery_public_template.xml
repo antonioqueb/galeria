@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template Principal -->
+    <template id="gallery_public_view">
+        <t t-call="website.layout">
+            <div id="wrap" class="gallery-container">
+                <section class="gallery-header pt32 pb32 bg-primary text-white">
+                    <div class="container text-center">
+                        <h1 t-field="share.name"/>
+                        <p class="lead">Preparado especialmente para <span t-field="share.partner_id.name"/></p>
+                        <small>Válido hasta: <span t-field="share.expiration_date" t-options='{"widget": "date"}'/></small>
+                    </div>
+                </section>
+
+                <div class="container mt48 mb48">
+                    <!-- Iterar por Categorías -->
+                    <t t-foreach="grouped_images" t-as="category">
+                        <div class="gallery-section mb-5">
+                            <h2 class="gallery-category-title border-bottom pb-2 mb-4">
+                                <span class="text-primary">■</span> <t t-esc="category"/>
+                            </h2>
+                            
+                            <!-- BENTO GRID -->
+                            <div class="bento-grid">
+                                <t t-foreach="grouped_images[category]" t-as="img">
+                                    <div t-attf-class="bento-item #{'bento-large' if img['is_large'] else ''}" t-att-data-aos="'fade-up'">
+                                        <div class="bento-card">
+                                            <a t-att-href="img['url']" target="_blank" class="bento-link">
+                                                <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
+                                                <div class="bento-overlay">
+                                                    <div class="bento-info">
+                                                        <h5 t-esc="img['lot_name']"/>
+                                                        <p t-if="img['dimensions']" t-esc="img['dimensions']"/>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                    
+                    <div t-if="not grouped_images" class="alert alert-warning text-center">
+                        No hay imágenes disponibles en este catálogo.
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Template Error/Expirado -->
+    <template id="gallery_not_found">
+        <t t-call="website.layout">
+            <div class="container text-center mt64">
+                <h1>404</h1>
+                <h3>Catálogo no encontrado</h3>
+                <p>El enlace podría estar incompleto.</p>
+            </div>
+        </t>
+    </template>
+
+    <template id="gallery_expired">
+        <t t-call="website.layout">
+            <div class="container text-center mt64">
+                <h1 class="text-danger">Enlace Expirado</h1>
+                <p>Este catálogo venció el <span t-field="share.expiration_date"/>.</p>
+                <p>Por favor contacta a tu vendedor para generar uno nuevo.</p>
+            </div>
+        </t>
+    </template>
+</odoo>

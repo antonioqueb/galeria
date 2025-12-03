@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción de Cliente (OWL Selector) -->
+    <record id="action_gallery_selector_js" model="ir.actions.client">
+        <field name="name">Crear Nuevo Catálogo</field>
+        <field name="tag">galeria.selector_dashboard</field>
+    </record>
+
+    <!-- Menú Principal -->
+    <menuitem id="menu_gallery_root" name="Galería" web_icon="stock,static/description/icon.png" sequence="20"/>
+
+    <!-- Submenús -->
+    <menuitem id="menu_gallery_create" 
+              name="Seleccionar Imágenes" 
+              parent="menu_gallery_root" 
+              action="action_gallery_selector_js" 
+              sequence="1"/>
+
+    <menuitem id="menu_gallery_shares" 
+              name="Historial de Enlaces" 
+              parent="menu_gallery_root" 
+              action="action_gallery_share" 
+              sequence="10"/>
+</odoo>
