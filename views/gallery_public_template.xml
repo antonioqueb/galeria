@@ -14,6 +14,7 @@
                 <!-- FontAwesome para iconos -->
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
                 
+                <!-- CSS de Odoo y del Módulo -->
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
                 
                 <style>
@@ -33,6 +34,7 @@
                 <main>
                     <t t-out="0"/>
                 </main>
+                <!-- JS de Odoo y del Módulo (Aquí se carga gallery_public.js) -->
                 <t t-call-assets="web.assets_frontend" t-css="false"/>
             </body>
         </html>
@@ -43,14 +45,12 @@
         <t t-call="galeria.gallery_layout_headless">
             <t t-set="title" t-value="share.name"/>
             
-            <!-- Inyectar Configuración para JS -->
+            <!-- Inyectar Configuración para JS (Antes de que carguen los assets) -->
             <script>
                 window.galleryConfig = {
                     token: "<t t-esc="token"/>"
                 };
             </script>
-            <!-- Script Principal -->
-            <script type="text/javascript" src="/galeria/static/src/js/gallery_public.js"></script>
 
             <div class="gallery-wrapper">
                 <!-- Header Fijo con Botón de Carrito -->
@@ -100,7 +100,8 @@
                                                 
                                                 <!-- Overlay acciones (Expandir) -->
                                                 <div class="card-actions">
-                                                    <button class="btn-expand" onclick="gallery.openLightbox(this)">
+                                                    <!-- Botón Expandir -->
+                                                    <button class="btn-expand" type="button" onclick="gallery.openLightbox(this)">
                                                         <i class="fa fa-expand"></i>
                                                     </button>
                                                 </div>
@@ -117,7 +118,7 @@
                                                     </div>
                                                     <span class="area-badge"><t t-esc="img['area']"/> m²</span>
                                                 </div>
-                                                <button class="btn-add-cart" onclick="gallery.addToCart(this)">
+                                                <button class="btn-add-cart" type="button" onclick="gallery.addToCart(this)">
                                                     <i class="fa fa-plus"></i>
                                                 </button>
                                             </div>
@@ -136,10 +137,9 @@
 
             <!-- COMPONENTS: LIGHTBOX & CART -->
             
-            <!-- 1. Lightbox con Zoom -->
+            <!-- 1. Lightbox con Zoom (Uso de entity segura para X) -->
             <div id="lightbox" class="lightbox">
-                <!-- CORRECCIÓN: Cambiado &times; por &#215; -->
-                <button class="close-lightbox" onclick="gallery.closeLightbox()">&#215;</button>
+                <button class="close-lightbox" type="button" onclick="gallery.closeLightbox()">&#215;</button>
                 <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
                     <img id="lightbox-img" src=""/>
                 </div>
@@ -149,8 +149,7 @@
             <div id="cart-sidebar" class="cart-sidebar">
                 <div class="cart-header">
                     <h3>Mi Selección</h3>
-                    <!-- CORRECCIÓN: Cambiado &times; por &#215; -->
-                    <button class="close-cart" onclick="gallery.toggleCart()">&#215;</button>
+                    <button class="close-cart" type="button" onclick="gallery.toggleCart()">&#215;</button>
                 </div>
                 <div class="cart-items" id="cart-items-container">
                     <!-- JS inyectará items aquí -->
@@ -166,7 +165,7 @@
                             <strong id="total-area">0.00</strong>
                         </div>
                     </div>
-                    <button id="btn-confirm" class="btn-checkout" onclick="gallery.confirmReservation()">
+                    <button id="btn-confirm" class="btn-checkout" type="button" onclick="gallery.confirmReservation()">
                         Confirmar Reserva
                     </button>
                 </div>

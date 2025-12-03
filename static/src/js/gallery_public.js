@@ -3,9 +3,10 @@
 class GalleryApp {
     constructor() {
         this.cart = [];
-        // Clave única por token para no mezclar carritos de diferentes clientes/links
+        // Clave única por token para evitar conflictos de sesión
         this.cartKey = 'stone_gallery_cart_' + (window.galleryConfig ? window.galleryConfig.token : 'default');
         
+        // Inicialización segura
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
         } else {
@@ -28,28 +29,29 @@ class GalleryApp {
         this.updateCartUI();
         this.updateButtonsState();
 
-        // Event listener para el botón del header
+        // Bindear eventos globales que no dependen de onclick inline
         const cartToggleBtn = document.getElementById('cart-toggle');
         if (cartToggleBtn) {
-            cartToggleBtn.addEventListener('click', () => this.toggleCart());
+            cartToggleBtn.onclick = () => this.toggleCart();
         }
     }
 
+    // --- ACCIONES DEL CARRITO ---
+
     addToCart(btn) {
+        if (!btn) return;
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
 
         const id = itemEl.dataset.id;
         
-        // Verificar si ya existe para hacer toggle (quitar si ya está)
+        // Toggle: Si ya existe, lo quita
         const existingIndex = this.cart.findIndex(i => String(i.id) === String(id));
-
         if (existingIndex > -1) {
             this.removeFromCart(id);
             return;
         }
 
-        // Crear objeto producto
         const product = {
             id: id,
             quant_id: itemEl.dataset.quantId,
@@ -80,15 +82,17 @@ class GalleryApp {
         localStorage.setItem(this.cartKey, JSON.stringify(this.cart));
     }
 
+    // --- ACTUALIZACIÓN DE UI ---
+
     updateButtonsState() {
-        // Contador del header
+        // Contador Header
         const counter = document.getElementById('cart-count');
         if (counter) {
             counter.innerText = this.cart.length;
             counter.style.display = this.cart.length > 0 ? 'inline-block' : 'none';
         }
 
-        // Botones de las tarjetas
+        // Botones en Grid
         document.querySelectorAll('.bento-item').forEach(el => {
             const btn = el.querySelector('.btn-add-cart');
             const id = el.dataset.id;
@@ -127,7 +131,6 @@ class GalleryApp {
         } else {
             this.cart.forEach(item => {
                 totalArea += item.area;
-                
                 const div = document.createElement('div');
                 div.className = 'cart-item';
                 div.innerHTML = `
@@ -137,7 +140,7 @@ class GalleryApp {
                         <p>Lote: <strong>${item.lot_name}</strong></p>
                         <p class="small">${item.dims} | ${item.area.toFixed(2)} m²</p>
                     </div>
-                    <button class="btn-remove" onclick="gallery.removeFromCart('${item.id}')" title="Eliminar">
+                    <button class="btn-remove" onclick="gallery.removeFromCart('${item.id}')">
                         <i class="fa fa-times"></i>
                     </button>
                 `;
@@ -168,9 +171,12 @@ class GalleryApp {
         }
     }
 
-    // --- Lightbox Zoom ---
+    // --- LIGHTBOX Y ZOOM ---
+
     openLightbox(btn) {
         const itemEl = btn.closest('.bento-item');
+        if (!itemEl) return;
+        
         const imgUrl = itemEl.dataset.url;
         const lightbox = document.getElementById('lightbox');
         const img = document.getElementById('lightbox-img');
@@ -179,7 +185,7 @@ class GalleryApp {
             img.style.transform = "scale(1)";
             img.src = imgUrl;
             lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden'; // Bloquear scroll
         }
     }
 
@@ -195,9 +201,11 @@ class GalleryApp {
     zoomImage(e) {
         const img = document.getElementById('lightbox-img');
         if (!img) return;
+        
         const rect = e.currentTarget.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width * 100;
         const y = (e.clientY - rect.top) / rect.height * 100;
+        
         img.style.transformOrigin = `${x}% ${y}%`;
         img.style.transform = "scale(2.5)";
     }
@@ -210,7 +218,8 @@ class GalleryApp {
         }
     }
 
-    // --- Server API ---
+    // --- CONFIRMACIÓN (API SERVER) ---
+
     async confirmReservation() {
         if (this.cart.length === 0) return;
 
@@ -264,4 +273,5 @@ class GalleryApp {
     }
 }
 
+// Inicializar globalmente para que funcione el onclick=""
 window.gallery = new GalleryApp();
