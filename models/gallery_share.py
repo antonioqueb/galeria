@@ -27,11 +27,12 @@ class GalleryShare(models.Model):
     # URL computada
     share_url = fields.Char(string="URL Compartida", compute='_compute_share_url')
 
-    @api.model
-    def create(self, vals):
-        if vals.get('name', 'Nuevo') == 'Nuevo':
-            vals['name'] = self.env['ir.sequence'].next_by_code('gallery.share') or 'CAT/0000'
-        return super(GalleryShare, self).create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'Nuevo') == 'Nuevo':
+                vals['name'] = self.env['ir.sequence'].next_by_code('gallery.share') or 'CAT/0000'
+        return super(GalleryShare, self).create(vals_list)
 
     @api.depends('create_date')
     def _compute_expiration(self):
@@ -82,10 +83,11 @@ class GalleryShare(models.Model):
     @api.model
     def create_from_selector(self, partner_id, image_ids):
         """Método llamado desde el JS para crear el share"""
-        share = self.create({
+        # Aunque aquí pasamos un dict, el ORM interno lo convierte a lista antes de llamar a create
+        share = self.create([{
             'partner_id': partner_id,
             'image_ids': [(6, 0, image_ids)]
-        })
+        }])
         return {
             'id': share.id,
             'name': share.name,
