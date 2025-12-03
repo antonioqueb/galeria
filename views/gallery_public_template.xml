@@ -34,7 +34,7 @@
                 <main>
                     <t t-out="0"/>
                 </main>
-                <!-- JS de Odoo y del Módulo (Aquí se carga gallery_public.js automáticamente) -->
+                <!-- JS de Odoo y del Módulo -->
                 <t t-call-assets="web.assets_frontend" t-css="false"/>
             </body>
         </html>
@@ -45,7 +45,7 @@
         <t t-call="galeria.gallery_layout_headless">
             <t t-set="title" t-value="share.name"/>
             
-            <!-- Inyectar Configuración para JS (Antes de que carguen los assets) -->
+            <!-- Inyectar Configuración para JS -->
             <script>
                 window.galleryConfig = {
                     token: "<t t-esc="token"/>"
@@ -53,7 +53,7 @@
             </script>
 
             <div class="gallery-wrapper">
-                <!-- Header Fijo con Botón de Carrito -->
+                <!-- Header Fijo -->
                 <header class="gallery-header">
                     <div class="container-fluid">
                         <div class="header-content">
@@ -83,9 +83,12 @@
                             
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
-                                    <!-- Tarjeta Bento con Data Attributes para JS -->
-                                    <div class="bento-item" 
-                                         t-attf-class="#{'bento-large' if img['is_large'] else ''}"
+                                    <!-- 
+                                        CORRECCIÓN CRÍTICA AQUÍ: 
+                                        Hemos fusionado 'class' y 't-attf-class' en una sola línea.
+                                        Esto asegura que la clase 'bento-item' siempre exista.
+                                    -->
+                                    <div t-attf-class="bento-item #{'bento-large' if img['is_large'] else ''}"
                                          t-att-data-id="img['id']"
                                          t-att-data-quant-id="img['quant_id']"
                                          t-att-data-name="img['name']"
@@ -98,16 +101,15 @@
                                             <div class="img-container">
                                                 <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
                                                 
-                                                <!-- Overlay acciones (Expandir) -->
+                                                <!-- Overlay acciones -->
                                                 <div class="card-actions">
-                                                    <!-- Botón Expandir (Onclick eliminado, JS detecta .btn-expand) -->
                                                     <button class="btn-expand" type="button">
                                                         <i class="fa fa-expand"></i>
                                                     </button>
                                                 </div>
                                             </div>
                                             
-                                            <!-- Footer con Info y Botón + -->
+                                            <!-- Footer con Info -->
                                             <div class="card-footer">
                                                 <div class="info-text">
                                                     <span class="product-name" t-esc="img['name']"/>
@@ -118,7 +120,6 @@
                                                     </div>
                                                     <span class="area-badge"><t t-esc="img['area']"/> m²</span>
                                                 </div>
-                                                <!-- Botón Agregar (Onclick eliminado, JS detecta .btn-add-cart) -->
                                                 <button class="btn-add-cart" type="button">
                                                     <i class="fa fa-plus"></i>
                                                 </button>
@@ -137,25 +138,19 @@
             </div>
 
             <!-- COMPONENTS: LIGHTBOX & CART -->
-            
-            <!-- 1. Lightbox con Zoom (Uso de entity segura para X) -->
             <div id="lightbox" class="lightbox">
-                <!-- Botón cerrar (JS detecta .close-lightbox) -->
                 <button class="close-lightbox" type="button">&#215;</button>
                 <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
                     <img id="lightbox-img" src=""/>
                 </div>
             </div>
 
-            <!-- 2. Sidecar Cart -->
             <div id="cart-sidebar" class="cart-sidebar">
                 <div class="cart-header">
                     <h3>Mi Selección</h3>
                     <button class="close-cart" type="button">&#215;</button>
                 </div>
-                <div class="cart-items" id="cart-items-container">
-                    <!-- JS inyectará items aquí -->
-                </div>
+                <div class="cart-items" id="cart-items-container"></div>
                 <div class="cart-footer">
                     <div class="totals">
                         <div class="row">
@@ -176,7 +171,7 @@
         </t>
     </template>
 
-    <!-- Error Templates -->
+    <!-- Templates de Error -->
     <template id="gallery_not_found">
         <t t-call="galeria.gallery_layout_headless">
             <div class="error-page">
