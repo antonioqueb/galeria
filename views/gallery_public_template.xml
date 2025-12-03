@@ -1,36 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Template Principal -->
+    <!-- Layout Base Independiente (Dark Mode) -->
+    <template id="gallery_layout_headless">
+        &lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title t-esc="title or 'Galería de Placas'"/>
+                
+                <!-- Google Fonts -->
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&amp;display=swap" rel="stylesheet"/>
+                
+                <!-- Inyectar CSS compilado de Odoo (Frontend mínimo) -->
+                <t t-call-assets="web.assets_frontend" t-js="false"/>
+                
+                <style>
+                    /* Reset básico para asegurar independencia de Odoo */
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        background-color: #121212; /* Fondo muy oscuro */
+                        color: #e0e0e0;
+                        font-family: 'Inter', sans-serif;
+                    }
+                    a { text-decoration: none; }
+                </style>
+            </head>
+            <body>
+                <main>
+                    <t t-out="0"/>
+                </main>
+                <!-- Inyectar JS mínimo si es necesario para el grid, aunque CSS es preferible -->
+                <t t-call-assets="web.assets_frontend" t-css="false"/>
+            </body>
+        </html>
+    </template>
+
+    <!-- Vista Principal -->
     <template id="gallery_public_view">
-        <t t-call="website.layout">
-            <div id="wrap" class="gallery-container">
-                <section class="gallery-header pt32 pb32 bg-primary text-white">
-                    <div class="container text-center">
-                        <h1 t-field="share.name"/>
-                        <p class="lead">Preparado especialmente para <span t-field="share.partner_id.name"/></p>
-                        <small>Válido hasta: <span t-field="share.expiration_date" t-options='{"widget": "date"}'/></small>
+        <t t-call="galeria.gallery_layout_headless">
+            <t t-set="title" t-value="share.name"/>
+            
+            <div class="gallery-wrapper">
+                <!-- Header Minimalista -->
+                <header class="gallery-header">
+                    <div class="container-fluid">
+                        <div class="header-content">
+                            <div class="brand">
+                                <span class="logo-text">STONE<span class="light">GALLERY</span></span>
+                            </div>
+                            <div class="client-info">
+                                <span class="label">Preparado para</span>
+                                <span class="client-name" t-field="share.partner_id.name"/>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Hero Section -->
+                <section class="hero-section">
+                    <div class="container">
+                        <h1>Selección Exclusiva</h1>
+                        <p class="subtitle">Válido hasta: <span t-field="share.expiration_date" t-options='{"widget": "date"}'/></p>
                     </div>
                 </section>
 
-                <div class="container mt48 mb48">
+                <div class="container content-container">
                     <!-- Iterar por Categorías -->
                     <t t-foreach="grouped_images" t-as="category">
-                        <div class="gallery-section mb-5">
-                            <h2 class="gallery-category-title border-bottom pb-2 mb-4">
-                                <span class="text-primary">■</span> <t t-esc="category"/>
+                        <div class="category-block">
+                            <h2 class="category-title">
+                                <t t-esc="category"/>
+                                <span class="line"></span>
                             </h2>
                             
                             <!-- BENTO GRID -->
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
-                                    <div t-attf-class="bento-item #{'bento-large' if img['is_large'] else ''}" t-att-data-aos="'fade-up'">
+                                    <div t-attf-class="bento-item #{'bento-large' if img['is_large'] else ''}">
                                         <div class="bento-card">
-                                            <a t-att-href="img['url']" target="_blank" class="bento-link">
+                                            <!-- Usamos lightbox nativo simple o solo link a imagen -->
+                                            <a t-att-href="img['url']" class="bento-link" target="_blank">
                                                 <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
                                                 <div class="bento-overlay">
                                                     <div class="bento-info">
-                                                        <h5 t-esc="img['lot_name']"/>
-                                                        <p t-if="img['dimensions']" t-esc="img['dimensions']"/>
+                                                        <span class="lot-id" t-esc="img['lot_name']"/>
+                                                        <span class="dimensions" t-if="img['dimensions']" t-esc="img['dimensions']"/>
                                                     </div>
                                                 </div>
                                             </a>
@@ -41,31 +97,33 @@
                         </div>
                     </t>
                     
-                    <div t-if="not grouped_images" class="alert alert-warning text-center">
-                        No hay imágenes disponibles en este catálogo.
+                    <div t-if="not grouped_images" class="empty-state">
+                        <p>No hay imágenes disponibles en este catálogo.</p>
                     </div>
                 </div>
+
+                <footer class="gallery-footer">
+                    <p>&amp;copy; <span t-esc="company.name"/> | Catálogo Privado</p>
+                </footer>
             </div>
         </t>
     </template>
 
-    <!-- Template Error/Expirado -->
+    <!-- Error Pages con Tema Oscuro -->
     <template id="gallery_not_found">
-        <t t-call="website.layout">
-            <div class="container text-center mt64">
+        <t t-call="galeria.gallery_layout_headless">
+            <div class="error-page">
                 <h1>404</h1>
-                <h3>Catálogo no encontrado</h3>
-                <p>El enlace podría estar incompleto.</p>
+                <p>Catálogo no encontrado</p>
             </div>
         </t>
     </template>
 
     <template id="gallery_expired">
-        <t t-call="website.layout">
-            <div class="container text-center mt64">
-                <h1 class="text-danger">Enlace Expirado</h1>
-                <p>Este catálogo venció el <span t-field="share.expiration_date"/>.</p>
-                <p>Por favor contacta a tu vendedor para generar uno nuevo.</p>
+        <t t-call="galeria.gallery_layout_headless">
+            <div class="error-page">
+                <h1>Enlace Expirado</h1>
+                <p>Este catálogo ya no está disponible.</p>
             </div>
         </t>
     </template>
