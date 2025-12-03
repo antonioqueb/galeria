@@ -34,7 +34,7 @@
                 <main>
                     <t t-out="0"/>
                 </main>
-                <!-- JS de Odoo y del Módulo (Aquí se carga gallery_public.js) -->
+                <!-- JS de Odoo y del Módulo (Aquí se carga gallery_public.js automáticamente) -->
                 <t t-call-assets="web.assets_frontend" t-css="false"/>
             </body>
         </html>
