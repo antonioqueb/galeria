@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import uuid
 from datetime import timedelta
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 from odoo.http import request
 
 class GalleryShare(models.Model):
@@ -19,7 +20,7 @@ class GalleryShare(models.Model):
     # Configuración de expiración
     create_date = fields.Datetime(string="Fecha Creación", default=fields.Datetime.now)
     
-    # CORRECCIÓN: Quitamos el compute almacenado que dependía de create_date y usamos un default o asignación manual
+    # Expiración manual o por defecto
     expiration_date = fields.Datetime(string="Expira el", required=True)
     
     is_expired = fields.Boolean(string="Expirado", compute='_compute_is_expired')
@@ -37,9 +38,8 @@ class GalleryShare(models.Model):
             if vals.get('name', 'Nuevo') == 'Nuevo':
                 vals['name'] = self.env['ir.sequence'].next_by_code('gallery.share') or 'CAT/0000'
             
-            # 2. CORRECCIÓN: Asignar fecha de expiración obligatoria si no viene
+            # 2. Asignar fecha de expiración obligatoria si no viene (3 días por defecto)
             if not vals.get('expiration_date'):
-                # Por defecto 3 días a partir de ahora mismo
                 vals['expiration_date'] = fields.Datetime.now() + timedelta(days=3)
                 
         return super(GalleryShare, self).create(vals_list)
@@ -89,7 +89,6 @@ class GalleryShare(models.Model):
     @api.model
     def create_from_selector(self, partner_id, image_ids):
         """Método llamado desde el JS para crear el share"""
-        # El ORM convierte esto a lista automáticamente para create_multi
         share = self.create([{
             'partner_id': partner_id,
             'image_ids': [(6, 0, image_ids)]
@@ -99,3 +98,91 @@ class GalleryShare(models.Model):
             'name': share.name,
             'url': share.share_url
         }
+
+    # =========================================================================
+    # Lógica de Carrito Público y Reserva
+    # =========================================================================
+
+    def create_public_hold_order(self, items):
+        """
+        Crea una orden de reserva basada en la selección del cliente externo.
+        Se ejecuta con sudo() desde el controller, pero usamos self para contexto.
+        """
+        self.ensure_one()
+        
+        # Instanciar modelos con permisos de sistema (Sudo)
+        HoldOrder = self.env['stock.lot.hold.order'].sudo()
+        Quant = self.env['stock.quant'].sudo()
+        
+        # 1. Buscar moneda USD obligatoria
+        usd_currency = self.env['res.currency'].sudo().search([('name', '=', 'USD')], limit=1)
+        if not usd_currency:
+            # Fallback a la moneda de la compañía del vendedor si no existe USD configurado
+            usd_currency = self.user_id.company_id.currency_id
+
+        # 2. Preparar líneas de la orden
+        hold_lines = []
+
+        for item in items:
+            quant_id = int(item.get('quant_id'))
+            quant = Quant.browse(quant_id)
+            
+            if not quant.exists():
+                continue
+            
+            # Validación estricta de disponibilidad (Stock libre, sin hold, sin reserva de sistema)
+            if quant.reserved_quantity > 0 or quant.x_tiene_hold:
+                raise UserError(f"El lote {quant.lot_id.name} ya no está disponible. Fue reservado por otro cliente.")
+
+            product = quant.product_id
+            
+            # 3. Obtener Precio Alto (USD 1)
+            # Buscamos x_price_usd_1 en product.template (heredado de inventory_shopping_cart)
+            price_unit = 0.0
+            if hasattr(product.product_tmpl_id, 'x_price_usd_1'):
+                price_unit = product.product_tmpl_id.x_price_usd_1
+            
+            # Si no hay precio USD configurado, usar precio de lista base
+            if price_unit <= 0:
+                price_unit = product.list_price 
+
+            hold_lines.append((0, 0, {
+                'quant_id': quant.id,
+                'lot_id': quant.lot_id.id,
+                'product_id': product.id,
+                'cantidad_m2': quant.quantity, # Reservar todo el lote (cantidad completa)
+                'precio_unitario': price_unit,
+                # 'precio_total' se calcula automáticamente por compute en hold.order.line
+            }))
+
+        if not hold_lines:
+            raise UserError("No se pudieron procesar los items seleccionados o ya no están disponibles.")
+
+        # 4. Crear la Orden de Reserva
+        # Usamos el vendedor original del link como responsable
+        # Usamos el partner del link como cliente
+        try:
+            order = HoldOrder.create({
+                'partner_id': self.partner_id.id,
+                'user_id': self.user_id.id,
+                'company_id': self.user_id.company_id.id, # Compañía del vendedor
+                'currency_id': usd_currency.id,
+                'fecha_orden': fields.Datetime.now(),
+                # La fecha de expiración se calcula automáticamente en el create del modelo hold.order (5 días hábiles)
+                'notas': f"Reserva creada automáticamente desde Galería Pública ({self.name}).",
+                'hold_line_ids': hold_lines
+            })
+
+            # 5. Confirmar la orden 
+            # Esto dispara la creación de los Holds físicos en stock.quant
+            order.action_confirm()
+
+            return {
+                'success': True, 
+                'order_name': order.name,
+                'message': 'Reserva confirmada exitosamente. Su vendedor se pondrá en contacto para finalizar.'
+            }
+
+        except Exception as e:
+            # Re-lanzar error para que lo capture el controlador y lo muestre al cliente JS
+            raise UserError(f"Error al procesar la reserva: {str(e)}")

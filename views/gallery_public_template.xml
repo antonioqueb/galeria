@@ -11,42 +11,28 @@
                 
                 <!-- Google Fonts -->
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&amp;display=swap" rel="stylesheet"/>
+                <!-- FontAwesome para iconos -->
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
                 
-                <!-- Inyectar CSS compilado de Odoo (Frontend mínimo) -->
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
                 
                 <style>
-                    /* Reset básico para asegurar independencia de Odoo y comportamiento App-like */
                     body {
-                        margin: 0;
-                        padding: 0;
-                        background-color: #121212; /* Fondo muy oscuro */
+                        margin: 0; padding: 0;
+                        background-color: #121212;
                         color: #e0e0e0;
                         font-family: 'Inter', sans-serif;
-                        overflow-x: hidden; /* Crucial para evitar scroll lateral en móvil */
+                        overflow-x: hidden;
                     }
-                    
-                    a { 
-                        text-decoration: none; 
-                    }
-                    
-                    /* Elimina el highlight azul al tocar en móviles para sensación nativa */
-                    * {
-                        -webkit-tap-highlight-color: transparent;
-                    }
-                    
-                    /* Asegura que las imágenes no rompan el layout mientras cargan */
-                    img {
-                        display: block;
-                        max-width: 100%;
-                    }
+                    a { text-decoration: none; }
+                    * { -webkit-tap-highlight-color: transparent; }
+                    img { display: block; max-width: 100%; }
                 </style>
             </head>
             <body>
                 <main>
                     <t t-out="0"/>
                 </main>
-                <!-- Inyectar JS mínimo si es necesario para el grid, aunque CSS es preferible -->
                 <t t-call-assets="web.assets_frontend" t-css="false"/>
             </body>
         </html>
@@ -57,54 +43,84 @@
         <t t-call="galeria.gallery_layout_headless">
             <t t-set="title" t-value="share.name"/>
             
+            <!-- Inyectar Configuración para JS -->
+            <script>
+                window.galleryConfig = {
+                    token: "<t t-esc="token"/>"
+                };
+            </script>
+            <!-- Script Principal -->
+            <script type="text/javascript" src="/galeria/static/src/js/gallery_public.js"></script>
+
             <div class="gallery-wrapper">
-                <!-- Header Minimalista -->
+                <!-- Header Fijo con Botón de Carrito -->
                 <header class="gallery-header">
                     <div class="container-fluid">
                         <div class="header-content">
                             <div class="brand">
-                                <span class="logo-text">RECUBRIMIENTOS<span class="light">GALLERY</span></span>
+                                <span class="logo-text">STONE<span class="light">GALLERY</span></span>
                             </div>
-                            <div class="client-info">
-                                <span class="label">Preparado para</span>
-                                <span class="client-name" t-field="share.partner_id.name"/>
+                            
+                            <div class="header-actions">
+                                <div class="client-info">
+                                    <span class="label">Hola,</span>
+                                    <span class="client-name" t-field="share.partner_id.name"/>
+                                </div>
+                                <button id="cart-toggle" class="btn-cart">
+                                    <i class="fa fa-shopping-bag"></i>
+                                    <span id="cart-count" class="badge">0</span>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                <!-- Hero Section -->
-                <section class="hero-section">
-                    <div class="container">
-                        <h1>Selección Exclusiva</h1>
-                        <p class="subtitle">Válido hasta: <span t-field="share.expiration_date" t-options='{"widget": "date"}'/></p>
-                    </div>
-                </section>
-
+                <!-- Contenedor Principal -->
                 <div class="container content-container">
-                    <!-- Iterar por Categorías -->
                     <t t-foreach="grouped_images" t-as="category">
                         <div class="category-block">
-                            <h2 class="category-title">
-                                <t t-esc="category"/>
-                                <span class="line"></span>
-                            </h2>
+                            <h2 class="category-title"><t t-esc="category"/> <span class="line"></span></h2>
                             
-                            <!-- BENTO GRID -->
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
-                                    <div t-attf-class="bento-item #{'bento-large' if img['is_large'] else ''}">
+                                    <!-- Tarjeta Bento con Data Attributes para JS -->
+                                    <div class="bento-item" 
+                                         t-attf-class="#{'bento-large' if img['is_large'] else ''}"
+                                         t-att-data-id="img['id']"
+                                         t-att-data-quant-id="img['quant_id']"
+                                         t-att-data-name="img['name']"
+                                         t-att-data-lot="img['lot_name']"
+                                         t-att-data-dims="img['dimensions']"
+                                         t-att-data-area="img['area']"
+                                         t-att-data-url="img['url']">
+                                        
                                         <div class="bento-card">
-                                            <!-- Usamos lightbox nativo simple o solo link a imagen -->
-                                            <a t-att-href="img['url']" class="bento-link" target="_blank">
+                                            <div class="img-container">
                                                 <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
-                                                <div class="bento-overlay">
-                                                    <div class="bento-info">
-                                                        <span class="lot-id" t-esc="img['lot_name']"/>
-                                                        <span class="dimensions" t-if="img['dimensions']" t-esc="img['dimensions']"/>
-                                                    </div>
+                                                
+                                                <!-- Overlay acciones (Expandir) -->
+                                                <div class="card-actions">
+                                                    <button class="btn-expand" onclick="gallery.openLightbox(this)">
+                                                        <i class="fa fa-expand"></i>
+                                                    </button>
                                                 </div>
-                                            </a>
+                                            </div>
+                                            
+                                            <!-- Footer con Info y Botón + -->
+                                            <div class="card-footer">
+                                                <div class="info-text">
+                                                    <span class="product-name" t-esc="img['name']"/>
+                                                    <div class="meta">
+                                                        <span class="lot">Lote: <t t-esc="img['lot_name']"/></span>
+                                                        <span class="sep">•</span>
+                                                        <span class="dims" t-esc="img['dimensions']"/>
+                                                    </div>
+                                                    <span class="area-badge"><t t-esc="img['area']"/> m²</span>
+                                                </div>
+                                                <button class="btn-add-cart" onclick="gallery.addToCart(this)">
+                                                    <i class="fa fa-plus"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </t>
@@ -113,18 +129,51 @@
                     </t>
                     
                     <div t-if="not grouped_images" class="empty-state">
-                        <p>No hay imágenes disponibles en este catálogo.</p>
+                        <p>No hay imágenes disponibles en este momento.</p>
                     </div>
                 </div>
-
-                <footer class="gallery-footer">
-                    <p>&amp;copy; <span t-esc="company.name"/> | Catálogo Privado</p>
-                </footer>
             </div>
+
+            <!-- COMPONENTS: LIGHTBOX & CART -->
+            
+            <!-- 1. Lightbox con Zoom -->
+            <div id="lightbox" class="lightbox">
+                <button class="close-lightbox" onclick="gallery.closeLightbox()">&times;</button>
+                <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
+                    <img id="lightbox-img" src=""/>
+                </div>
+            </div>
+
+            <!-- 2. Sidecar Cart -->
+            <div id="cart-sidebar" class="cart-sidebar">
+                <div class="cart-header">
+                    <h3>Mi Selección</h3>
+                    <button class="close-cart" onclick="gallery.toggleCart()">&times;</button>
+                </div>
+                <div class="cart-items" id="cart-items-container">
+                    <!-- JS inyectará items aquí -->
+                </div>
+                <div class="cart-footer">
+                    <div class="totals">
+                        <div class="row">
+                            <span>Placas:</span>
+                            <strong id="total-plates">0</strong>
+                        </div>
+                        <div class="row">
+                            <span>Total m²:</span>
+                            <strong id="total-area">0.00</strong>
+                        </div>
+                    </div>
+                    <button id="btn-confirm" class="btn-checkout" onclick="gallery.confirmReservation()">
+                        Confirmar Reserva
+                    </button>
+                </div>
+            </div>
+            <div id="cart-overlay" class="cart-overlay" onclick="gallery.toggleCart()"></div>
         </t>
     </template>
 
-    <!-- Error Pages con Tema Oscuro -->
+    <!-- Error Templates -->
     <template id="gallery_not_found">
         <t t-call="galeria.gallery_layout_headless">
             <div class="error-page">

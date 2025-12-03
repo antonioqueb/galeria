@@ -20,8 +20,7 @@ class CreateLinkDialog extends Component {
         // Cargar partners al iniciar el componente
         onWillStart(async () => {
             try {
-                // CORRECCIÓN: Dominio vacío [] para traer todos los contactos sin filtrar por rango de cliente
-                // Ordenamos por nombre para facilitar la búsqueda visual
+                // Traer todos los contactos sin filtrar por rango, ordenados por nombre
                 this.state.partners = await this.orm.searchRead(
                     "res.partner", 
                     [], 
@@ -72,20 +71,61 @@ export class GallerySelector extends Component {
         this.dialog = useService("dialog");
         this.state = useState({
             images: [],
+            categories: [], // Lista de categorías
+            selectedCategory: null,
             selectedIds: new Set(),
             search: ""
         });
 
         onWillStart(async () => {
+            await this.loadCategories();
             await this.loadImages();
         });
     }
 
-    async loadImages(domain = []) {
+    async loadCategories() {
         try {
-            // Carga imágenes con info de Lote
+            // Cargar categorías para el filtro
+            this.state.categories = await this.orm.searchRead(
+                "product.category",
+                [],
+                ["id", "name"],
+                { order: "name" }
+            );
+        } catch (e) {
+            console.error("Error cargando categorías:", e);
+        }
+    }
+
+    async loadImages() {
+        try {
+            // CONSTRUCCIÓN DEL DOMINIO DE DISPONIBILIDAD
+            // Filtramos imágenes asociadas a lotes que tengan stock disponible real
+            const domain = [
+                // Stock físico en ubicación interna
+                ['lot_id.quant_ids.location_id.usage', '=', 'internal'],
+                ['lot_id.quant_ids.quantity', '>', 0],
+                
+                // Que NO esté reservado por órdenes de venta/entrega
+                ['lot_id.quant_ids.reserved_quantity', '=', 0],
+                
+                // Que NO tenga un Hold Manual activo (del módulo stock_lot_dimensions)
+                ['lot_id.quant_ids.x_tiene_hold', '=', false]
+            ];
+
+            // Filtro de Texto (Búsqueda por nombre de lote)
+            if (this.state.search) {
+                domain.push(['lot_id.name', 'ilike', this.state.search]);
+            }
+
+            // Filtro por Categoría
+            if (this.state.selectedCategory) {
+                domain.push(['lot_id.product_id.categ_id', '=', parseInt(this.state.selectedCategory)]);
+            }
+
+            // Campos a traer
             const fields = ["id", "name", "image_small", "lot_id"];
-            // Asumimos que stock_lot_image tiene image_small del módulo anterior
+            
             this.state.images = await this.orm.searchRead(
                 "stock.lot.image", 
                 domain, 
@@ -106,13 +146,13 @@ export class GallerySelector extends Component {
     }
 
     async onSearch(ev) {
-        const val = ev.target.value;
-        this.state.search = val;
-        let domain = [];
-        if (val) {
-            domain = [['lot_id.name', 'ilike', val]];
-        }
-        await this.loadImages(domain);
+        this.state.search = ev.target.value;
+        await this.loadImages();
+    }
+
+    async onCategoryChange(ev) {
+        this.state.selectedCategory = ev.target.value;
+        await this.loadImages();
     }
 
     createLink() {
