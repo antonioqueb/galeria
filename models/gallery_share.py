@@ -18,7 +18,10 @@ class GalleryShare(models.Model):
     
     # Configuración de expiración
     create_date = fields.Datetime(string="Fecha Creación", default=fields.Datetime.now)
-    expiration_date = fields.Datetime(string="Expira el", required=True, compute='_compute_expiration', store=True, readonly=False)
+    
+    # CORRECCIÓN: Quitamos el compute almacenado que dependía de create_date y usamos un default o asignación manual
+    expiration_date = fields.Datetime(string="Expira el", required=True)
+    
     is_expired = fields.Boolean(string="Expirado", compute='_compute_is_expired')
     
     # Imágenes seleccionadas
@@ -30,22 +33,25 @@ class GalleryShare(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
+            # 1. Asignar secuencia
             if vals.get('name', 'Nuevo') == 'Nuevo':
                 vals['name'] = self.env['ir.sequence'].next_by_code('gallery.share') or 'CAT/0000'
+            
+            # 2. CORRECCIÓN: Asignar fecha de expiración obligatoria si no viene
+            if not vals.get('expiration_date'):
+                # Por defecto 3 días a partir de ahora mismo
+                vals['expiration_date'] = fields.Datetime.now() + timedelta(days=3)
+                
         return super(GalleryShare, self).create(vals_list)
-
-    @api.depends('create_date')
-    def _compute_expiration(self):
-        for record in self:
-            if not record.expiration_date and record.create_date:
-                # Por defecto 3 días de vigencia
-                record.expiration_date = record.create_date + timedelta(days=3)
 
     @api.depends('expiration_date')
     def _compute_is_expired(self):
         now = fields.Datetime.now()
         for record in self:
-            record.is_expired = record.expiration_date and record.expiration_date < now
+            if record.expiration_date:
+                record.is_expired = record.expiration_date < now
+            else:
+                record.is_expired = False
 
     @api.depends('access_token')
     def _compute_share_url(self):
@@ -83,7 +89,7 @@ class GalleryShare(models.Model):
     @api.model
     def create_from_selector(self, partner_id, image_ids):
         """Método llamado desde el JS para crear el share"""
-        # Aunque aquí pasamos un dict, el ORM interno lo convierte a lista antes de llamar a create
+        # El ORM convierte esto a lista automáticamente para create_multi
         share = self.create([{
             'partner_id': partner_id,
             'image_ids': [(6, 0, image_ids)]
