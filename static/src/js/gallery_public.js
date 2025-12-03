@@ -2,8 +2,8 @@
 
 class GalleryApp {
     constructor() {
+        console.log("DEBUG: Constructor GalleryApp iniciado");
         this.cart = [];
-        // Clave única por token para evitar conflictos de sesión
         this.cartKey = 'stone_gallery_cart_' + (window.galleryConfig ? window.galleryConfig.token : 'default');
         
         // Inicialización segura
@@ -15,11 +15,13 @@ class GalleryApp {
     }
 
     init() {
+        console.log("DEBUG: Init ejecutándose");
         // Cargar carrito previo
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
             try {
                 this.cart = JSON.parse(savedCart);
+                console.log("DEBUG: Carrito cargado", this.cart.length);
             } catch (e) {
                 console.error("Error parsing cart", e);
                 this.cart = [];
@@ -29,40 +31,51 @@ class GalleryApp {
         this.updateCartUI();
         this.updateButtonsState();
         
-        // INICIALIZAR EL LISTENER DE EVENTOS (NUEVO)
+        // INICIALIZAR EL LISTENER DE EVENTOS
         this.bindEvents();
     }
 
-    // --- MANEJO DE EVENTOS CENTRALIZADO (FIX) ---
     bindEvents() {
-        document.addEventListener('click', (e) => {
-            // 1. Botón Expandir Lightbox
+        console.log("DEBUG: Vinculando eventos globales (bindEvents)");
+        
+        // Usamos document body para asegurar que cubrimos todo
+        document.body.addEventListener('click', (e) => {
+            // Log para ver QUÉ se está clickeando exactamente
+            // console.log("DEBUG: Click detectado en:", e.target);
+
+            // 1. Botón Expandir Lightbox (.btn-expand)
             const expandBtn = e.target.closest('.btn-expand');
             if (expandBtn) {
+                console.log("DEBUG: Click en Expandir");
                 e.preventDefault();
+                e.stopPropagation(); // Detener propagación por si acaso
                 this.openLightbox(expandBtn);
                 return;
             }
 
-            // 2. Botón Agregar al Carrito (Grid)
+            // 2. Botón Agregar al Carrito (.btn-add-cart)
             const addBtn = e.target.closest('.btn-add-cart');
             if (addBtn) {
+                console.log("DEBUG: Click en Agregar al Carrito");
                 e.preventDefault();
+                e.stopPropagation();
                 this.addToCart(addBtn);
                 return;
             }
 
-            // 3. Botón Eliminar del Carrito (Sidecar)
+            // 3. Botón Eliminar del Carrito (.btn-remove)
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
+                console.log("DEBUG: Click en Eliminar item");
                 e.preventDefault();
-                const id = removeBtn.dataset.id; // Obtenemos ID del data attribute
+                const id = removeBtn.dataset.id;
                 this.removeFromCart(id);
                 return;
             }
 
-            // 4. Abrir/Cerrar Carrito (Toggle)
+            // 4. Toggle Carrito
             if (e.target.closest('#cart-toggle') || e.target.closest('.close-cart') || e.target.closest('#cart-overlay')) {
+                console.log("DEBUG: Click en Toggle Carrito");
                 e.preventDefault();
                 this.toggleCart();
                 return;
@@ -77,6 +90,7 @@ class GalleryApp {
 
             // 6. Confirmar Reserva
             if (e.target.closest('#btn-confirm')) {
+                console.log("DEBUG: Click en Confirmar");
                 e.preventDefault();
                 this.confirmReservation();
                 return;
@@ -84,15 +98,18 @@ class GalleryApp {
         });
     }
 
-    // --- ACCIONES DEL CARRITO ---
-
     addToCart(btn) {
+        console.log("DEBUG: Ejecutando addToCart");
         if (!btn) return;
         const itemEl = btn.closest('.bento-item');
-        if (!itemEl) return;
+        if (!itemEl) {
+            console.error("DEBUG ERROR: No se encontró el elemento .bento-item padre");
+            return;
+        }
 
         const id = itemEl.dataset.id;
-        
+        console.log("DEBUG: ID del item:", id);
+
         // Toggle: Si ya existe, lo quita
         const existingIndex = this.cart.findIndex(i => String(i.id) === String(id));
         if (existingIndex > -1) {
@@ -119,6 +136,7 @@ class GalleryApp {
     }
 
     removeFromCart(id) {
+        console.log("DEBUG: Removiendo ID", id);
         const strId = String(id);
         this.cart = this.cart.filter(item => String(item.id) !== strId);
         this.saveCart();
@@ -130,17 +148,13 @@ class GalleryApp {
         localStorage.setItem(this.cartKey, JSON.stringify(this.cart));
     }
 
-    // --- ACTUALIZACIÓN DE UI ---
-
     updateButtonsState() {
-        // Contador Header
         const counter = document.getElementById('cart-count');
         if (counter) {
             counter.innerText = this.cart.length;
             counter.style.display = this.cart.length > 0 ? 'inline-block' : 'none';
         }
 
-        // Botones en Grid
         document.querySelectorAll('.bento-item').forEach(el => {
             const btn = el.querySelector('.btn-add-cart');
             const id = el.dataset.id;
@@ -181,7 +195,6 @@ class GalleryApp {
                 totalArea += item.area;
                 const div = document.createElement('div');
                 div.className = 'cart-item';
-                // NOTA: Aquí eliminamos onclick y usamos data-id
                 div.innerHTML = `
                     <img src="${item.url}" alt="Thumbnail"/>
                     <div class="item-details">
@@ -220,9 +233,8 @@ class GalleryApp {
         }
     }
 
-    // --- LIGHTBOX Y ZOOM ---
-
     openLightbox(btn) {
+        console.log("DEBUG: Abriendo Lightbox");
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
         
@@ -234,7 +246,7 @@ class GalleryApp {
             img.style.transform = "scale(1)";
             img.src = imgUrl;
             lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Bloquear scroll
+            document.body.style.overflow = 'hidden';
         }
     }
 
@@ -267,8 +279,6 @@ class GalleryApp {
         }
     }
 
-    // --- CONFIRMACIÓN (API SERVER) ---
-
     async confirmReservation() {
         if (this.cart.length === 0) return;
 
@@ -282,6 +292,7 @@ class GalleryApp {
                 throw new Error("Token no encontrado.");
             }
 
+            console.log("DEBUG: Enviando reserva al servidor...");
             const response = await fetch('/gallery/confirm_reservation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -297,6 +308,7 @@ class GalleryApp {
             });
 
             const result = await response.json();
+            console.log("DEBUG: Respuesta servidor", result);
             
             if (result.result && result.result.success) {
                 alert("✅ " + result.result.message + "\n\nReferencia: " + result.result.order_name);
@@ -322,5 +334,5 @@ class GalleryApp {
     }
 }
 
-// Inicializar instancia para debugging
+// Inicializar globalmente
 window.gallery = new GalleryApp();
