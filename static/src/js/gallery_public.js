@@ -28,12 +28,60 @@ class GalleryApp {
 
         this.updateCartUI();
         this.updateButtonsState();
+        
+        // INICIALIZAR EL LISTENER DE EVENTOS (NUEVO)
+        this.bindEvents();
+    }
 
-        // Bindear eventos globales que no dependen de onclick inline
-        const cartToggleBtn = document.getElementById('cart-toggle');
-        if (cartToggleBtn) {
-            cartToggleBtn.onclick = () => this.toggleCart();
-        }
+    // --- MANEJO DE EVENTOS CENTRALIZADO (FIX) ---
+    bindEvents() {
+        document.addEventListener('click', (e) => {
+            // 1. Botón Expandir Lightbox
+            const expandBtn = e.target.closest('.btn-expand');
+            if (expandBtn) {
+                e.preventDefault();
+                this.openLightbox(expandBtn);
+                return;
+            }
+
+            // 2. Botón Agregar al Carrito (Grid)
+            const addBtn = e.target.closest('.btn-add-cart');
+            if (addBtn) {
+                e.preventDefault();
+                this.addToCart(addBtn);
+                return;
+            }
+
+            // 3. Botón Eliminar del Carrito (Sidecar)
+            const removeBtn = e.target.closest('.btn-remove');
+            if (removeBtn) {
+                e.preventDefault();
+                const id = removeBtn.dataset.id; // Obtenemos ID del data attribute
+                this.removeFromCart(id);
+                return;
+            }
+
+            // 4. Abrir/Cerrar Carrito (Toggle)
+            if (e.target.closest('#cart-toggle') || e.target.closest('.close-cart') || e.target.closest('#cart-overlay')) {
+                e.preventDefault();
+                this.toggleCart();
+                return;
+            }
+
+            // 5. Cerrar Lightbox
+            if (e.target.closest('.close-lightbox')) {
+                e.preventDefault();
+                this.closeLightbox();
+                return;
+            }
+
+            // 6. Confirmar Reserva
+            if (e.target.closest('#btn-confirm')) {
+                e.preventDefault();
+                this.confirmReservation();
+                return;
+            }
+        });
     }
 
     // --- ACCIONES DEL CARRITO ---
@@ -133,6 +181,7 @@ class GalleryApp {
                 totalArea += item.area;
                 const div = document.createElement('div');
                 div.className = 'cart-item';
+                // NOTA: Aquí eliminamos onclick y usamos data-id
                 div.innerHTML = `
                     <img src="${item.url}" alt="Thumbnail"/>
                     <div class="item-details">
@@ -140,7 +189,7 @@ class GalleryApp {
                         <p>Lote: <strong>${item.lot_name}</strong></p>
                         <p class="small">${item.dims} | ${item.area.toFixed(2)} m²</p>
                     </div>
-                    <button class="btn-remove" onclick="gallery.removeFromCart('${item.id}')">
+                    <button class="btn-remove" type="button" data-id="${item.id}">
                         <i class="fa fa-times"></i>
                     </button>
                 `;
@@ -273,5 +322,5 @@ class GalleryApp {
     }
 }
 
-// Inicializar globalmente para que funcione el onclick=""
+// Inicializar instancia para debugging
 window.gallery = new GalleryApp();

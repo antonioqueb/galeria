@@ -100,8 +100,8 @@
                                                 
                                                 <!-- Overlay acciones (Expandir) -->
                                                 <div class="card-actions">
-                                                    <!-- Botón Expandir -->
-                                                    <button class="btn-expand" type="button" onclick="gallery.openLightbox(this)">
+                                                    <!-- Botón Expandir (Onclick eliminado, JS detecta .btn-expand) -->
+                                                    <button class="btn-expand" type="button">
                                                         <i class="fa fa-expand"></i>
                                                     </button>
                                                 </div>
@@ -118,7 +118,8 @@
                                                     </div>
                                                     <span class="area-badge"><t t-esc="img['area']"/> m²</span>
                                                 </div>
-                                                <button class="btn-add-cart" type="button" onclick="gallery.addToCart(this)">
+                                                <!-- Botón Agregar (Onclick eliminado, JS detecta .btn-add-cart) -->
+                                                <button class="btn-add-cart" type="button">
                                                     <i class="fa fa-plus"></i>
                                                 </button>
                                             </div>
@@ -139,7 +140,8 @@
             
             <!-- 1. Lightbox con Zoom (Uso de entity segura para X) -->
             <div id="lightbox" class="lightbox">
-                <button class="close-lightbox" type="button" onclick="gallery.closeLightbox()">&#215;</button>
+                <!-- Botón cerrar (JS detecta .close-lightbox) -->
+                <button class="close-lightbox" type="button">&#215;</button>
                 <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
                     <img id="lightbox-img" src=""/>
                 </div>
@@ -149,7 +151,7 @@
             <div id="cart-sidebar" class="cart-sidebar">
                 <div class="cart-header">
                     <h3>Mi Selección</h3>
-                    <button class="close-cart" type="button" onclick="gallery.toggleCart()">&#215;</button>
+                    <button class="close-cart" type="button">&#215;</button>
                 </div>
                 <div class="cart-items" id="cart-items-container">
                     <!-- JS inyectará items aquí -->
@@ -165,12 +167,12 @@
                             <strong id="total-area">0.00</strong>
                         </div>
                     </div>
-                    <button id="btn-confirm" class="btn-checkout" type="button" onclick="gallery.confirmReservation()">
+                    <button id="btn-confirm" class="btn-checkout" type="button">
                         Confirmar Reserva
                     </button>
                 </div>
             </div>
-            <div id="cart-overlay" class="cart-overlay" onclick="gallery.toggleCart()"></div>
+            <div id="cart-overlay" class="cart-overlay"></div>
         </t>
     </template>
 
