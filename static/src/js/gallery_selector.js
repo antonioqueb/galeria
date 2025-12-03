@@ -11,38 +11,55 @@ class CreateLinkDialog extends Component {
         this.orm = useService("orm");
         this.notification = useService("notification");
         this.action = useService("action");
+        
         this.state = useState({
             partner_id: false,
             partners: []
         });
-    }
 
-    async onWillStart() {
-        // Cargar partners (demo simplificado, idealmente usar Many2OneField)
-        this.state.partners = await this.orm.searchRead("res.partner", [['customer_rank', '>', 0]], ["id", "name"], { limit: 50 });
+        // Cargar partners al iniciar el componente
+        onWillStart(async () => {
+            try {
+                // CORRECCIÓN: Dominio vacío [] para traer todos los contactos sin filtrar por rango de cliente
+                // Ordenamos por nombre para facilitar la búsqueda visual
+                this.state.partners = await this.orm.searchRead(
+                    "res.partner", 
+                    [], 
+                    ["id", "name"], 
+                    { limit: 80, order: "name asc" }
+                );
+            } catch (e) {
+                console.error("Error cargando contactos:", e);
+                this.state.partners = [];
+            }
+        });
     }
 
     async confirm() {
         if (!this.state.partner_id) {
-            this.notification.add("Debes seleccionar un cliente", { type: "danger" });
+            this.notification.add("Debes seleccionar un contacto", { type: "danger" });
             return;
         }
 
-        const result = await this.orm.call("gallery.share", "create_from_selector", [
-            parseInt(this.state.partner_id),
-            this.props.selectedImages
-        ]);
+        try {
+            const result = await this.orm.call("gallery.share", "create_from_selector", [
+                parseInt(this.state.partner_id),
+                this.props.selectedImages
+            ]);
 
-        this.props.close();
-        
-        // Redirigir al registro creado
-        this.action.doAction({
-            type: 'ir.actions.act_window',
-            res_model: 'gallery.share',
-            res_id: result.id,
-            views: [[false, 'form']],
-            target: 'current',
-        });
+            this.props.close();
+            
+            // Redirigir al registro creado
+            this.action.doAction({
+                type: 'ir.actions.act_window',
+                res_model: 'gallery.share',
+                res_id: result.id,
+                views: [[false, 'form']],
+                target: 'current',
+            });
+        } catch (error) {
+            this.notification.add("Error al crear el enlace: " + error.message, { type: "danger" });
+        }
     }
 }
 CreateLinkDialog.template = "galeria.CreateLinkDialog";
@@ -65,10 +82,19 @@ export class GallerySelector extends Component {
     }
 
     async loadImages(domain = []) {
-        // Carga imágenes con info de Lote
-        const fields = ["id", "name", "image_small", "lot_id"];
-        // Asumimos que stock_lot_image tiene image_small del módulo anterior
-        this.state.images = await this.orm.searchRead("stock.lot.image", domain, fields, { limit: 100, order: "id desc" });
+        try {
+            // Carga imágenes con info de Lote
+            const fields = ["id", "name", "image_small", "lot_id"];
+            // Asumimos que stock_lot_image tiene image_small del módulo anterior
+            this.state.images = await this.orm.searchRead(
+                "stock.lot.image", 
+                domain, 
+                fields, 
+                { limit: 100, order: "id desc" }
+            );
+        } catch (e) {
+            console.error("Error cargando imágenes:", e);
+        }
     }
 
     toggleSelection(imgId) {
@@ -94,7 +120,7 @@ export class GallerySelector extends Component {
         
         this.dialog.add(CreateLinkDialog, {
             selectedImages: Array.from(this.state.selectedIds),
-            title: "Generar Enlace para Cliente"
+            title: "Generar Enlace para Contacto"
         });
     }
 
