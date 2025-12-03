@@ -138,7 +138,8 @@
             
             <!-- 1. Lightbox con Zoom -->
             <div id="lightbox" class="lightbox">
-                <button class="close-lightbox" onclick="gallery.closeLightbox()">&times;</button>
+                <!-- CORRECCIÓN: Cambiado &times; por &#215; -->
+                <button class="close-lightbox" onclick="gallery.closeLightbox()">&#215;</button>
                 <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
                     <img id="lightbox-img" src=""/>
                 </div>
@@ -148,7 +149,8 @@
             <div id="cart-sidebar" class="cart-sidebar">
                 <div class="cart-header">
                     <h3>Mi Selección</h3>
-                    <button class="close-cart" onclick="gallery.toggleCart()">&times;</button>
+                    <!-- CORRECCIÓN: Cambiado &times; por &#215; -->
+                    <button class="close-cart" onclick="gallery.toggleCart()">&#215;</button>
                 </div>
                 <div class="cart-items" id="cart-items-container">
                     <!-- JS inyectará items aquí -->
