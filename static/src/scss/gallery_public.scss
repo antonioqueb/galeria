@@ -1,4 +1,6 @@
-/* Variables Dark Mode / Grayscale */
+/* static/src/scss/gallery_public.scss */
+
+/* Variables Dark Mode */
 $bg-dark: #121212;
 $bg-card: #1e1e1e;
 $text-primary: #ffffff;
@@ -6,11 +8,18 @@ $text-secondary: #b0b0b0;
 $accent-gray: #333333;
 $border-color: #2d2d2d;
 
+/* Mixins para media queries */
+@mixin mobile {
+    @media (max-width: 767px) { @content; }
+}
+
 body {
     background-color: $bg-dark !important;
     color: $text-primary;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    margin: 0;
+    overflow-x: hidden; /* Prevenir scroll horizontal accidental */
 }
 
 .gallery-wrapper {
@@ -19,14 +28,14 @@ body {
     flex-direction: column;
 }
 
-/* Header */
+/* Header Responsivo */
 .gallery-header {
     background-color: rgba(18, 18, 18, 0.95);
     border-bottom: 1px solid $border-color;
     padding: 20px 0;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1000; /* Z-index alto para asegurar que flote sobre todo */
     backdrop-filter: blur(10px);
 
     .header-content {
@@ -36,6 +45,12 @@ body {
         max-width: 1400px;
         margin: 0 auto;
         padding: 0 20px;
+        
+        @include mobile {
+            flex-direction: column;
+            gap: 10px;
+            padding: 0 15px;
+        }
     }
 
     .brand {
@@ -43,12 +58,21 @@ body {
         font-weight: 600;
         letter-spacing: 2px;
         color: $text-primary;
+        white-space: nowrap;
         
         .light { font-weight: 300; color: $text-secondary; }
+        
+        @include mobile {
+            font-size: 1.1rem;
+        }
     }
 
     .client-info {
         text-align: right;
+        
+        @include mobile {
+            text-align: center;
+        }
         
         .label {
             display: block;
@@ -60,22 +84,32 @@ body {
         .client-name {
             font-weight: 600;
             font-size: 0.9rem;
+            color: #fff;
         }
     }
 }
 
-/* Hero */
+/* Hero Section */
 .hero-section {
     padding: 60px 20px;
     text-align: center;
     background: linear-gradient(180deg, $bg-dark 0%, $bg-card 100%);
     border-bottom: 1px solid $border-color;
 
+    @include mobile {
+        padding: 40px 15px;
+    }
+
     h1 {
         font-weight: 300;
         font-size: 2.5rem;
         margin-bottom: 10px;
         letter-spacing: -1px;
+        line-height: 1.2;
+        
+        @include mobile {
+            font-size: 1.8rem; /* Fuente más pequeña en móvil */
+        }
     }
 
     .subtitle {
@@ -90,11 +124,21 @@ body {
     margin: 0 auto;
     padding: 40px 20px;
     flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+
+    @include mobile {
+        padding: 30px 10px; /* Menos padding lateral en móvil */
+    }
 }
 
 /* Category Headers */
 .category-block {
     margin-bottom: 60px;
+    
+    @include mobile {
+        margin-bottom: 40px;
+    }
 }
 
 .category-title {
@@ -108,6 +152,11 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
 
+    @include mobile {
+        font-size: 1rem;
+        margin-bottom: 20px;
+    }
+
     .line {
         flex: 1;
         height: 1px;
@@ -115,31 +164,55 @@ body {
     }
 }
 
-/* BENTO GRID (Dark) */
+/* BENTO GRID (Extremely Responsive) */
 .bento-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* Desktop: Columnas de mínimo 250px */
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     grid-auto-rows: 280px;
     grid-auto-flow: dense;
     gap: 20px;
+
+    /* Móvil: Forzamos comportamiento más compacto */
+    @include mobile {
+        /* Usamos grid de 2 columnas fijas flexible */
+        grid-template-columns: repeat(2, 1fr);
+        /* Reducimos altura de fila para que no sean rectángulos muy verticales */
+        grid-auto-rows: 180px; 
+        gap: 10px;
+    }
+}
+
+/* Pantallas muy pequeñas (iPhone SE, etc) */
+@media (max-width: 380px) {
+    .bento-grid {
+        grid-template-columns: 1fr; /* 1 sola columna */
+        grid-auto-rows: 250px;
+    }
 }
 
 .bento-item {
     background-color: $bg-card;
-    border-radius: 4px; /* Bordes menos redondeados para look industrial */
+    border-radius: 4px;
     overflow: hidden;
     position: relative;
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     border: 1px solid $border-color;
+    transition: transform 0.3s ease;
+    
+    /* Prevenir overflow de imagen */
+    display: flex; 
+    flex-direction: column;
 
     &:hover {
-        transform: translateY(-4px);
-        border-color: #555;
-        z-index: 2;
+        @media (hover: hover) {
+            transform: translateY(-4px);
+            border-color: #555;
+            z-index: 2;
+        }
     }
 }
 
-/* Span para pantallas grandes */
+/* Item "Grande" solo en pantallas grandes */
 @media (min-width: 992px) {
     .bento-item.bento-large {
         grid-column: span 2;
@@ -151,6 +224,8 @@ body {
     width: 100%;
     height: 100%;
     display: block;
+    position: relative;
+    text-decoration: none;
 }
 
 .bento-link img {
@@ -158,26 +233,45 @@ body {
     height: 100%;
     object-fit: cover;
     transition: filter 0.3s, transform 0.5s;
-    filter: brightness(0.9) grayscale(20%); /* Ligera desaturación por defecto */
+    filter: brightness(0.9) grayscale(20%);
+    
+    /* En móvil, la imagen se ve full color por defecto */
+    @include mobile {
+        filter: brightness(1) grayscale(0%);
+    }
 }
 
 .bento-link:hover img {
-    transform: scale(1.03);
-    filter: brightness(1) grayscale(0%);
+    @media (hover: hover) {
+        transform: scale(1.03);
+        filter: brightness(1) grayscale(0%);
+    }
 }
 
+/* Overlay de información */
 .bento-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     padding: 20px;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);
+    
+    /* Desktop: Oculto por defecto */
     opacity: 0;
     transform: translateY(10px);
     transition: all 0.3s ease;
+
+    /* Móvil o dispositivos touch: SIEMPRE VISIBLE */
+    @media (hover: none), (max-width: 767px) {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+        padding: 15px 10px; /* Padding más pequeño en móvil */
+        background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 100%);
+    }
 }
 
+/* Mostrar al hover en desktop */
 .bento-item:hover .bento-overlay {
     opacity: 1;
     transform: translateY(0);
@@ -186,28 +280,39 @@ body {
 .bento-info {
     display: flex;
     flex-direction: column;
+    text-align: left;
     
     .lot-id {
         font-weight: 600;
         font-size: 1rem;
         color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        
+        @include mobile {
+            font-size: 0.85rem;
+        }
     }
     
     .dimensions {
         font-size: 0.8rem;
-        color: $text-secondary;
-        margin-top: 4px;
+        color: #d1d1d1;
+        margin-top: 2px;
         font-family: monospace;
+        
+        @include mobile {
+            font-size: 0.7rem;
+        }
     }
 }
 
 /* Footer & Errors */
 .gallery-footer {
     text-align: center;
-    padding: 40px;
-    color: #444;
+    padding: 40px 20px;
+    color: #555;
     font-size: 0.8rem;
     border-top: 1px solid $border-color;
+    margin-top: auto;
 }
 
 .error-page {
@@ -219,15 +324,17 @@ body {
     text-align: center;
     background-color: $bg-dark;
     color: $text-secondary;
+    padding: 20px;
 
-    h1 { font-size: 4rem; margin: 0; color: #fff; }
-    p { font-size: 1.2rem; }
+    h1 { font-size: 3rem; margin: 0; color: #fff; }
+    p { font-size: 1rem; }
 }
 
 .empty-state {
     text-align: center;
-    padding: 60px;
+    padding: 60px 20px;
     color: $text-secondary;
     background: $bg-card;
     border: 1px dashed $border-color;
+    border-radius: 8px;
 }

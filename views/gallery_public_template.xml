@@ -6,7 +6,7 @@
         <html lang="es">
             <head>
                 <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
                 <title t-esc="title or 'Galería de Placas'"/>
                 
                 <!-- Google Fonts -->
@@ -16,15 +16,30 @@
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
                 
                 <style>
-                    /* Reset básico para asegurar independencia de Odoo */
+                    /* Reset básico para asegurar independencia de Odoo y comportamiento App-like */
                     body {
                         margin: 0;
                         padding: 0;
                         background-color: #121212; /* Fondo muy oscuro */
                         color: #e0e0e0;
                         font-family: 'Inter', sans-serif;
+                        overflow-x: hidden; /* Crucial para evitar scroll lateral en móvil */
                     }
-                    a { text-decoration: none; }
+                    
+                    a { 
+                        text-decoration: none; 
+                    }
+                    
+                    /* Elimina el highlight azul al tocar en móviles para sensación nativa */
+                    * {
+                        -webkit-tap-highlight-color: transparent;
+                    }
+                    
+                    /* Asegura que las imágenes no rompan el layout mientras cargan */
+                    img {
+                        display: block;
+                        max-width: 100%;
+                    }
                 </style>
             </head>
             <body>
