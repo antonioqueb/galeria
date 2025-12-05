@@ -59,20 +59,25 @@ export class GallerySelector extends Component {
             images: [],
             categories: [],
             products: [],
+            
+            // Filtros
             selectedCategory: "",
             selectedProduct: "",
             filterBlock: "",
             filterBundle: "",
-            search: "",
+            search: "", // Lote
+            
             selectedIds: new Set(),
             currentCompanyId: null,
             loading: false
         });
 
+        // Debounce para inputs de texto (evita recargas excesivas)
         this.debouncedLoad = useDebounced(() => this.loadImages(), 500);
 
         onWillStart(async () => {
             try {
+                // Obtener compañía de forma segura
                 this.state.currentCompanyId = await this.orm.call("gallery.share", "get_current_company", []);
             } catch (e) { console.error("Error company:", e); }
 
@@ -82,93 +87,89 @@ export class GallerySelector extends Component {
     }
 
     async loadCategories() {
+        // Buscar categoría padre "Placas" para limpiar el filtro
         try {
-            // 1. Buscar la categoría padre "Placas" (ajusta el nombre si es diferente en tu BD)
-            // Buscamos por nombre 'Placas' o 'Placa'
-            const parentCategs = await this.orm.searchRead(
-                "product.category", 
-                [['name', 'ilike', 'Placas']], 
-                ["id"], 
-                { limit: 1 }
-            );
-
+            const parent = await this.orm.searchRead("product.category", [['name', 'ilike', 'Placas']], ["id"], { limit: 1 });
             let domain = [];
-            if (parentCategs.length > 0) {
-                // Si existe 'Placas', traer solo sus hijas (child_of incluye al padre)
-                domain = [['parent_id', 'child_of', parentCategs[0].id]];
-            } else {
-                // Fallback: Si no encuentra "Placas", traer todas (o podrías dejarlo vacío)
-                console.warn("Categoría 'Placas' no encontrada, mostrando todas.");
-            }
-
-            this.state.categories = await this.orm.searchRead(
-                "product.category", 
-                domain, 
-                ["id", "name"], 
-                { order: "name" }
-            );
-        } catch (e) {
-            console.error("Error cargando categorías:", e);
-        }
+            if (parent.length > 0) domain = [['parent_id', 'child_of', parent[0].id]];
+            
+            this.state.categories = await this.orm.searchRead("product.category", domain, ["id", "name"], { order: "name" });
+        } catch (e) { console.error(e); }
     }
 
     async loadProducts() {
-        // ✅ CORRECCIÓN: El dominio debe ser explícito. 
-        // Usamos 1 en lugar de true para evitar problemas de serialización en algunas versiones
-        const domain = [['sale_ok', '=', true]]; 
-        
+        const domain = [['sale_ok', '=', true]];
         if (this.state.selectedCategory) {
             domain.push(['categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
         }
-        
-        try {
-            this.state.products = await this.orm.searchRead(
-                "product.product", 
-                domain, 
-                ["id", "name", "default_code"], 
-                { limit: 100, order: "name" }
-            );
-        } catch (e) {
-            console.error("Error cargando productos:", e);
-        }
+        this.state.products = await this.orm.searchRead("product.product", domain, ["id", "name", "default_code"], { limit: 100, order: "name" });
     }
 
     async loadImages() {
         this.state.loading = true;
         try {
-            const domain = [
-                ['lot_id.quant_ids.location_id.usage', '=', 'internal'],
-                ['lot_id.quant_ids.quantity', '>', 0],
-                ['lot_id.quant_ids.reserved_quantity', '=', 0],
-                ['lot_id.quant_ids.x_tiene_hold', '=', false]
+            // ============================================================
+            // PASO 1: BUSCAR QUANTS DISPONIBLES (Filtro Estricto)
+            // ============================================================
+            // Buscamos en el inventario físico qué lotes cumplen TODAS las reglas.
+            // Aplicamos los filtros de texto aquí para aprovechar la indexación de stock.quant/stock.lot
+            
+            const quantDomain = [
+                ['location_id.usage', '=', 'internal'],
+                ['quantity', '>', 0],
+                ['reserved_quantity', '=', 0],  // Sin reserva de sistema
+                ['x_tiene_hold', '=', false]    // Sin apartado manual
             ];
 
+            // Filtro Empresa
             if (this.state.currentCompanyId) {
-                domain.unshift(['lot_id.quant_ids.company_id', '=', this.state.currentCompanyId]);
+                quantDomain.unshift(['company_id', '=', this.state.currentCompanyId]);
             }
 
-            if (this.state.search) {
-                domain.push(['lot_id.name', 'ilike', this.state.search]);
+            // Filtros de Usuario aplicados al Lote dentro del Quant
+            if (this.state.search) { // Lote
+                quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
             }
             if (this.state.filterBlock) {
-                domain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
+                quantDomain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
             }
             if (this.state.filterBundle) {
-                domain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
+                quantDomain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
             }
             if (this.state.selectedCategory) {
-                domain.push(['lot_id.product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
+                quantDomain.push(['product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
             }
             if (this.state.selectedProduct) {
-                domain.push(['lot_id.product_id', '=', parseInt(this.state.selectedProduct)]);
+                quantDomain.push(['product_id', '=', parseInt(this.state.selectedProduct)]);
             }
 
+            // Obtenemos solo los IDs de lotes válidos
+            const validQuants = await this.orm.searchRead(
+                "stock.quant", 
+                quantDomain, 
+                ["lot_id"], 
+                { limit: 200 } // Límite razonable para visualización
+            );
+
+            const validLotIds = validQuants.map(q => q.lot_id[0]);
+
+            // Si no hay lotes disponibles, vaciamos y salimos
+            if (validLotIds.length === 0) {
+                this.state.images = [];
+                this.state.loading = false;
+                return;
+            }
+
+            // ============================================================
+            // PASO 2: BUSCAR IMÁGENES DE ESOS LOTES
+            // ============================================================
             this.state.images = await this.orm.searchRead(
                 "stock.lot.image", 
-                domain, 
+                [['lot_id', 'in', validLotIds]], 
                 ["id", "name", "image_small", "lot_id"], 
-                { limit: 100, order: "id desc" }
+                { limit: 200, order: "id desc" }
             );
+
         } catch (e) {
             console.error("Error loading images:", e);
         } finally {
@@ -176,10 +177,11 @@ export class GallerySelector extends Component {
         }
     }
 
+    // --- Eventos ---
     async onCategoryChange(ev) {
         this.state.selectedCategory = ev.target.value;
         this.state.selectedProduct = "";
-        await this.loadProducts(); // Ahora esto debería funcionar sin error RPC
+        await this.loadProducts();
         await this.loadImages();
     }
 

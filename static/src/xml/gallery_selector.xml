@@ -4,24 +4,24 @@
     <t t-name="galeria.GallerySelector" owl="1">
         <div class="o_gallery_app h-100 d-flex text-900">
             
-            <!-- SIDEBAR FILTROS -->
+            <!-- SIDEBAR DE FILTROS -->
             <div class="o_gallery_sidebar d-flex flex-column p-3 bg-white border-end">
                 <h5 class="mb-4 text-primary fw-bold">
-                    <i class="fa fa-filter me-2"/>Filtros
+                    <i class="fa fa-filter me-2"/>Filtros de Inventario
                 </h5>
 
-                <!-- Categoría -->
+                <!-- 1. Categoría -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Categoría</label>
                     <select class="form-select form-select-sm" t-model="state.selectedCategory" t-on-change="onCategoryChange">
-                        <option value="">Todas</option>
+                        <option value="">Todas las categorías</option>
                         <t t-foreach="state.categories" t-as="c" t-key="c.id">
                             <option t-att-value="c.id"><t t-esc="c.name"/></option>
                         </t>
                     </select>
                 </div>
 
-                <!-- Material (Producto) -->
+                <!-- 2. Material (Producto) -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Material</label>
                     <select class="form-select form-select-sm" t-model="state.selectedProduct" t-on-change="onProductChange" t-att-disabled="!state.selectedCategory">
@@ -35,32 +35,33 @@
 
                 <hr class="opacity-10 my-3"/>
 
-                <!-- Buscador Lote -->
+                <!-- 3. Lote -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Lote / Serie</label>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light"><i class="fa fa-search"/></span>
+                        <span class="input-group-text bg-light"><i class="fa fa-barcode"/></span>
                         <input type="text" class="form-control" placeholder="Ej. L-1024..." 
                                t-on-input="(ev) => this.onInputSearch(ev, 'search')"/>
                     </div>
                 </div>
 
-                <!-- Bloque -->
+                <!-- 4. Bloque -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Bloque</label>
                     <input type="text" class="form-control form-control-sm" placeholder="Ej. B-05..." 
                            t-on-input="(ev) => this.onInputSearch(ev, 'filterBlock')"/>
                 </div>
 
-                <!-- Atado -->
+                <!-- 5. Atado -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Atado</label>
                     <input type="text" class="form-control form-control-sm" placeholder="Ej. A-01..." 
                            t-on-input="(ev) => this.onInputSearch(ev, 'filterBundle')"/>
                 </div>
 
-                <div class="mt-auto text-center text-muted small">
-                    <t t-esc="state.images.length"/> placas encontradas
+                <div class="mt-auto p-2 bg-light rounded border text-center">
+                    <small class="text-muted d-block">Resultados:</small>
+                    <strong class="text-primary"><t t-esc="state.images.length"/> placas disponibles</strong>
                 </div>
             </div>
 
@@ -73,19 +74,19 @@
                         <div class="form-check m-0">
                             <input class="form-check-input" type="checkbox" id="selectAll" 
                                    t-on-change="selectAll" t-att-checked="state.images.length > 0 &amp;&amp; state.selectedIds.size === state.images.length"/>
-                            <label class="form-check-label small" for="selectAll">Todo</label>
+                            <label class="form-check-label small fw-bold" for="selectAll">Seleccionar Todo</label>
                         </div>
                         <button class="btn btn-link btn-sm text-danger text-decoration-none" 
                                 t-if="isSomethingSelected" t-on-click="clearSelection">
-                            Deseleccionar (<t t-esc="state.selectedIds.size"/>)
+                            <i class="fa fa-times me-1"/>Limpiar (<t t-esc="state.selectedIds.size"/>)
                         </button>
                     </div>
 
                     <div>
-                        <button class="btn btn-primary px-4 shadow-sm" 
+                        <button class="btn btn-primary px-4 shadow-sm fw-bold" 
                                 t-att-disabled="!isSomethingSelected"
                                 t-on-click="createLink">
-                            <i class="fa fa-share-alt me-2"/> GENERAR CATÁLOGO
+                            <i class="fa fa-share-alt me-2"/> CREAR CATÁLOGO
                         </button>
                     </div>
                 </div>
@@ -94,16 +95,16 @@
                 <div class="o_gallery_content p-4 flex-grow-1 overflow-auto">
                     
                     <!-- Loading -->
-                    <div t-if="state.loading" class="text-center mt-5">
+                    <div t-if="state.loading" class="d-flex flex-column align-items-center justify-content-center mt-5 text-muted">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2 text-muted">Buscando placas...</p>
+                        <p class="mt-3">Verificando disponibilidad...</p>
                     </div>
 
                     <!-- Grid -->
                     <div t-else="" class="row g-3">
                         <t t-foreach="state.images" t-as="img" t-key="img.id">
                             <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
-                                <div t-attf-class="card h-100 o_gallery_card border-0 shadow-sm #{state.selectedIds.has(img.id) ? 'selected ring-2 ring-primary' : ''}"
+                                <div t-attf-class="card h-100 o_gallery_card border-0 shadow-sm #{state.selectedIds.has(img.id) ? 'selected' : ''}"
                                      t-on-click="() => this.toggleSelection(img.id)">
                                     
                                     <!-- Header Imagen -->
@@ -113,7 +114,7 @@
                                         
                                         <!-- Overlay Check -->
                                         <div class="o_card_overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                                             t-att-class="state.selectedIds.has(img.id) ? 'bg-primary-opacity' : ''">
+                                             t-att-class="state.selectedIds.has(img.id) ? 'active' : ''">
                                             <div class="form-check">
                                                 <input class="form-check-input scale-150" type="checkbox" 
                                                        t-att-checked="state.selectedIds.has(img.id)" readonly="readonly"/>
@@ -136,9 +137,11 @@
                         
                         <!-- Empty State -->
                         <div t-if="!state.loading and state.images.length === 0" class="col-12 text-center mt-5 text-muted">
-                            <i class="fa fa-folder-open-o fa-3x mb-3"/>
-                            <h4>No se encontraron placas</h4>
-                            <p>Intenta ajustar los filtros de búsqueda.</p>
+                            <div class="py-5">
+                                <i class="fa fa-search fa-3x mb-3 opacity-50"/>
+                                <h4>No se encontraron placas disponibles</h4>
+                                <p>Ajusta los filtros o verifica que el material no esté reservado.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -146,14 +149,15 @@
         </div>
     </t>
 
+    <!-- Modal Template -->
     <t t-name="galeria.CreateLinkDialog" owl="1">
         <Dialog title="props.title">
             <div class="p-4">
                 <div class="mb-4 text-center">
-                    <div class="bg-light rounded-circle d-inline-flex p-3 mb-2">
-                        <i class="fa fa-share-alt fa-2x text-primary"/>
+                    <div class="bg-light rounded-circle d-inline-flex p-3 mb-2 text-primary">
+                        <i class="fa fa-share-alt fa-2x"/>
                     </div>
-                    <h5>Compartir <t t-esc="props.selectedImages.length"/> placas</h5>
+                    <h5>Compartir <strong class="text-primary"><t t-esc="props.selectedImages.length"/></strong> placas</h5>
                 </div>
 
                 <label class="form-label fw-bold">Seleccionar Cliente</label>
@@ -163,8 +167,9 @@
                         <option t-att-value="p.id"><t t-esc="p.name"/></option>
                     </t>
                 </select>
-                <div class="form-text mt-2">
-                    Se creará un catálogo temporal válido por 3 días.
+                <div class="alert alert-info mt-3 d-flex align-items-center p-2 small">
+                    <i class="fa fa-info-circle me-2"/>
+                    El enlace generado será válido por 3 días.
                 </div>
             </div>
             <t t-set-slot="footer">

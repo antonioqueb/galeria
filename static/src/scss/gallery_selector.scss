@@ -1,11 +1,19 @@
 .o_gallery_app {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    height: 100%;
     
     .o_gallery_sidebar {
         width: 280px;
         min-width: 280px;
+        max-width: 280px;
         z-index: 2;
         overflow-y: auto;
+        height: 100%;
+    }
+    
+    .o_gallery_main {
+        height: 100%;
+        overflow: hidden;
     }
 
     .o_gallery_card {
@@ -13,6 +21,7 @@
         transition: all 0.2s ease-in-out;
         border: 1px solid rgba(0,0,0,0.08) !important;
         background: #fff;
+        overflow: hidden;
 
         &:hover {
             transform: translateY(-4px);
@@ -21,10 +30,20 @@
             .transition-zoom {
                 transform: scale(1.05);
             }
+            
+            .o_card_overlay {
+                opacity: 1; // Mostrar overlay al hover
+                background-color: rgba(0,0,0,0.02);
+            }
         }
 
         &.selected {
-            border: 2px solid #0d6efd !important; // Primary color
+            border: 2px solid #0d6efd !important; // Borde azul si seleccionado
+            
+            .o_card_overlay {
+                opacity: 1;
+                background-color: rgba(13, 110, 253, 0.2); // Fondo azulado
+            }
         }
 
         .card-img-top {
@@ -37,23 +56,15 @@
 
         .o_card_overlay {
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, background-color 0.2s;
+            z-index: 10;
             
-            &.bg-primary-opacity {
-                background-color: rgba(13, 110, 253, 0.3);
-                opacity: 1;
+            // Checkbox styling
+            .form-check-input {
+                cursor: pointer;
+                width: 1.5em;
+                height: 1.5em;
             }
-        }
-
-        &:hover .o_card_overlay {
-            opacity: 1;
-            background-color: rgba(0,0,0,0.05); // Hover overlay subtle
-        }
-        
-        // Mantener visible si está seleccionado
-        &.selected .o_card_overlay {
-            background-color: rgba(13, 110, 253, 0.3);
-            opacity: 1;
         }
     }
 
