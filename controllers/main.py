@@ -9,7 +9,7 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/view/<string:token>', type='http', auth='public', csrf=False)
     def view_gallery(self, token, **kwargs):
-        # 1. Buscar el share con permisos elevados
+        # 1. Buscar el share
         share = request.env['gallery.share'].sudo().search([
             ('access_token', '=', token)
         ], limit=1)
@@ -22,7 +22,7 @@ class GalleryController(http.Controller):
 
         grouped_images = defaultdict(list)
         
-        # ✅ Forzamos el contexto a la compañía del Share
+        # ✅ Forzamos el entorno a la compañía del share
         StockQuant = request.env['stock.quant'].sudo().with_company(share.company_id)
 
         # 2. Iterar imágenes y validar disponibilidad REAL en la EMPRESA CORRECTA
@@ -32,7 +32,7 @@ class GalleryController(http.Controller):
             # ✅ Búsqueda estricta por compañía
             quant = StockQuant.search([
                 ('lot_id', '=', lot.id),
-                ('company_id', '=', share.company_id.id), # 🔒 FILTRO DE EMPRESA
+                ('company_id', '=', share.company_id.id), # Filtro de empresa
                 ('location_id.usage', '=', 'internal'),
                 ('quantity', '>', 0),
                 ('reserved_quantity', '=', 0),
@@ -40,7 +40,6 @@ class GalleryController(http.Controller):
             ], limit=1)
 
             # Si no hay stock libre EN ESTA EMPRESA, se oculta la imagen
-            # Esto previene que el cliente vea algo que no puede apartar
             if not quant:
                 continue
 
@@ -70,7 +69,7 @@ class GalleryController(http.Controller):
         values = {
             'share': share,
             'grouped_images': dict(grouped_images),
-            'company': share.company_id, # Usar la compañía del share
+            'company': share.company_id,
             'token': token
         }
         return request.render('galeria.gallery_public_view', values)

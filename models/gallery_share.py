@@ -14,7 +14,7 @@ class GalleryShare(models.Model):
     partner_id = fields.Many2one('res.partner', string="Cliente", required=True, tracking=True)
     user_id = fields.Many2one('res.users', string="Vendedor", default=lambda self: self.env.user, readonly=True)
     
-    # ✅ NUEVO: Vinculación estricta con la empresa
+    # ✅ Vinculación estricta con la empresa
     company_id = fields.Many2one(
         'res.company', 
         string="Compañía", 
@@ -84,7 +84,7 @@ class GalleryShare(models.Model):
 
     @api.model
     def create_from_selector(self, partner_id, image_ids):
-        # ✅ Al crear desde el selector, usamos explícitamente la compañía del usuario actual
+        # ✅ Al crear desde el selector JS, usamos explícitamente la compañía del usuario actual
         share = self.create([{
             'partner_id': partner_id,
             'image_ids': [(6, 0, image_ids)],
@@ -97,13 +97,10 @@ class GalleryShare(models.Model):
         }
 
     def create_public_hold_order(self, items):
-        """
-        Crea una orden de reserva basada en la selección del cliente externo.
-        """
+        """Crea una orden de reserva basada en la selección del cliente externo."""
         self.ensure_one()
         
         # ✅ Forzamos el entorno a la compañía que generó el Link
-        # Esto es crucial para que el 'search' de quants encuentre los de la empresa correcta
         HoldOrder = self.env['stock.lot.hold.order'].with_company(self.company_id).sudo()
         Quant = self.env['stock.quant'].with_company(self.company_id).sudo()
         
@@ -114,30 +111,27 @@ class GalleryShare(models.Model):
         hold_lines = []
 
         for item in items:
-            # ✅ Validamos ID del quant o buscamos por Lote + Compañía
-            # El frontend manda 'quant_id', pero validamos que pertenezca a la empresa del share
-            # para evitar apartar quants fantasmas de otras empresas.
-            
-            lot_id = int(item.get('lot_id')) # Asumimos que JS manda lot_id también, si no, sacarlo del quant
+            lot_id = int(item.get('lot_id'))
             if not lot_id and item.get('quant_id'):
+                 # Fallback por si el JS antiguo manda quant_id
                  original_quant = Quant.browse(int(item.get('quant_id')))
                  lot_id = original_quant.lot_id.id
 
-            # Búsqueda estricta en la compañía del share
+            # ✅ Búsqueda estricta en la compañía del share
+            # Esto evita apartar quants que existen en otra empresa pero no en esta
             quant = Quant.search([
                 ('lot_id', '=', lot_id),
-                ('company_id', '=', self.company_id.id), # 🔒 FILTRO CLAVE
+                ('company_id', '=', self.company_id.id), # Filtro crítico
                 ('location_id.usage', '=', 'internal'),
                 ('quantity', '>', 0)
             ], limit=1)
             
             if not quant:
-                # Si no existe quant disponible en ESTA empresa, error o saltar
                 raise UserError(f"El material {item.get('name')} ya no está disponible en este almacén.")
             
             # Validación estricta de disponibilidad
             if quant.reserved_quantity > 0 or quant.x_tiene_hold:
-                raise UserError(f"El lote {quant.lot_id.name} ya no está disponible. Fue reservado por otro cliente recientemente.")
+                raise UserError(f"El lote {quant.lot_id.name} ya no está disponible. Fue reservado por otro cliente.")
 
             product = quant.product_id
             
@@ -164,7 +158,7 @@ class GalleryShare(models.Model):
             order = HoldOrder.create({
                 'partner_id': self.partner_id.id,
                 'user_id': self.user_id.id,
-                'company_id': self.company_id.id, # 🔒 EMPRESA DEL SHARE
+                'company_id': self.company_id.id, # ✅ Empresa del Share
                 'currency_id': usd_currency.id,
                 'fecha_orden': fields.Datetime.now(),
                 'notas': f"Reserva creada automáticamente desde Galería Pública ({self.name}).",

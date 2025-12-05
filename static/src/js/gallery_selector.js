@@ -4,7 +4,6 @@ import { registry } from "@web/core/registry";
 import { Component, useState, onWillStart } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
-import { session } from "@web/session";
 
 // Componente para el Modal de Crear Link
 class CreateLinkDialog extends Component {
@@ -67,7 +66,7 @@ export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
         this.dialog = useService("dialog");
-        // CORRECCIÓN: Eliminamos la dependencia de useService("company") que causaba el error
+        this.user = useService("user"); // ✅ Usamos el servicio de usuario para el contexto
         
         this.state = useState({
             images: [],
@@ -98,23 +97,32 @@ export class GallerySelector extends Component {
 
     async loadImages() {
         try {
-            // CORRECCIÓN: Usamos session directamente para obtener la compañía.
-            // session.user_context.allowed_company_ids es un array, el [0] es la actual.
-            const currentCompanyId = session.user_context.allowed_company_ids[0];
+            // ✅ CORRECCIÓN CRÍTICA: Obtener Company ID desde el servicio user
+            // user.context.allowed_company_ids es un array [current, allowed...]
+            let currentCompanyId = null;
+            
+            if (this.user.context && this.user.context.allowed_company_ids) {
+                currentCompanyId = this.user.context.allowed_company_ids[0];
+            }
 
-            // CONSTRUCCIÓN DEL DOMINIO DE DISPONIBILIDAD ESTRICTO
+            if (!currentCompanyId) {
+                console.error("No se pudo determinar la compañía activa del usuario.");
+                return;
+            }
+
+            // Construcción del dominio
             const domain = [
-                // 1. Filtrar por compañía actual explícitamente en el quant
+                // 1. Filtrar por compañía actual explícitamente
                 ['lot_id.quant_ids.company_id', '=', currentCompanyId],
                 
                 // 2. Ubicación Interna y Stock Físico
                 ['lot_id.quant_ids.location_id.usage', '=', 'internal'],
                 ['lot_id.quant_ids.quantity', '>', 0],
                 
-                // 3. Sin reservas de sistema (En orden de entrega)
+                // 3. Sin reservas de sistema
                 ['lot_id.quant_ids.reserved_quantity', '=', 0],
                 
-                // 4. Sin Hold Manual activo (Validación de disponibilidad real)
+                // 4. Sin Hold Manual activo
                 ['lot_id.quant_ids.x_tiene_hold', '=', false]
             ];
 
