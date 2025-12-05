@@ -96,6 +96,13 @@ class GalleryShare(models.Model):
             'url': share.share_url
         }
 
+    @api.model
+    def get_current_company(self):
+        """
+        ✅ Helper para obtener la compañía activa desde JS sin depender de 'session' o servicios inestables.
+        """
+        return self.env.company.id
+
     def create_public_hold_order(self, items):
         """Crea una orden de reserva basada en la selección del cliente externo."""
         self.ensure_one()
@@ -118,7 +125,6 @@ class GalleryShare(models.Model):
                  lot_id = original_quant.lot_id.id
 
             # ✅ Búsqueda estricta en la compañía del share
-            # Esto evita apartar quants que existen en otra empresa pero no en esta
             quant = Quant.search([
                 ('lot_id', '=', lot_id),
                 ('company_id', '=', self.company_id.id), # Filtro crítico
