@@ -83,7 +83,7 @@ class GalleryController(http.Controller):
                     # Generar ID seguro para el bloque (sin espacios ni caracteres raros)
                     # Esto soluciona el error de que no abría el detalle
                     safe_block_name = re.sub(r'[^a-zA-Z0-9]', '_', str(block_name))
-                    block_id = f"BLK_{safe_block_name}_{first_img['id']}"
+                    block_id = f"{safe_block_name}_{first_img['id']}"
                     
                     block_item = {
                         'id': block_id, 
