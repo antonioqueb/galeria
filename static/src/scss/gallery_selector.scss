@@ -16,6 +16,11 @@
         overflow: hidden;
     }
 
+    // Placeholder background color
+    .bg-200 {
+        background-color: #e9ecef !important;
+    }
+
     .o_gallery_card {
         cursor: pointer;
         transition: all 0.2s ease-in-out;
@@ -38,16 +43,12 @@
         }
 
         &.selected {
-            border: 2px solid #0d6efd !important; // Borde azul si seleccionado
+            border: 2px solid #0d6efd !important;
             
             .o_card_overlay {
                 opacity: 1;
-                background-color: rgba(13, 110, 253, 0.2); // Fondo azulado
+                background-color: rgba(13, 110, 253, 0.2);
             }
-        }
-
-        .card-img-top {
-            background-color: #f3f4f6;
         }
 
         .transition-zoom {
@@ -59,11 +60,14 @@
             transition: opacity 0.2s, background-color 0.2s;
             z-index: 10;
             
-            // Checkbox styling
             .form-check-input {
                 cursor: pointer;
                 width: 1.5em;
                 height: 1.5em;
+            }
+            
+            &.active {
+                opacity: 1;
             }
         }
     }

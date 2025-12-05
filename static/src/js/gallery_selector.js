@@ -72,12 +72,11 @@ export class GallerySelector extends Component {
             loading: false
         });
 
-        // Debounce para inputs de texto (evita recargas excesivas)
+        // Debounce para no saturar el servidor al escribir
         this.debouncedLoad = useDebounced(() => this.loadImages(), 500);
 
         onWillStart(async () => {
             try {
-                // Obtener compañía de forma segura
                 this.state.currentCompanyId = await this.orm.call("gallery.share", "get_current_company", []);
             } catch (e) { console.error("Error company:", e); }
 
@@ -87,7 +86,6 @@ export class GallerySelector extends Component {
     }
 
     async loadCategories() {
-        // Buscar categoría padre "Placas" para limpiar el filtro
         try {
             const parent = await this.orm.searchRead("product.category", [['name', 'ilike', 'Placas']], ["id"], { limit: 1 });
             let domain = [];
@@ -109,10 +107,8 @@ export class GallerySelector extends Component {
         this.state.loading = true;
         try {
             // ============================================================
-            // PASO 1: BUSCAR QUANTS DISPONIBLES (Filtro Estricto)
+            // ESTRATEGIA DE DISPONIBILIDAD ESTRICTA
             // ============================================================
-            // Buscamos en el inventario físico qué lotes cumplen TODAS las reglas.
-            // Aplicamos los filtros de texto aquí para aprovechar la indexación de stock.quant/stock.lot
             
             const quantDomain = [
                 ['location_id.usage', '=', 'internal'],
@@ -121,52 +117,40 @@ export class GallerySelector extends Component {
                 ['x_tiene_hold', '=', false]    // Sin apartado manual
             ];
 
-            // Filtro Empresa
             if (this.state.currentCompanyId) {
                 quantDomain.unshift(['company_id', '=', this.state.currentCompanyId]);
             }
 
-            // Filtros de Usuario aplicados al Lote dentro del Quant
-            if (this.state.search) { // Lote
-                quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
-            }
-            if (this.state.filterBlock) {
-                quantDomain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
-            }
-            if (this.state.filterBundle) {
-                quantDomain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
-            }
-            if (this.state.selectedCategory) {
-                quantDomain.push(['product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
-            }
-            if (this.state.selectedProduct) {
-                quantDomain.push(['product_id', '=', parseInt(this.state.selectedProduct)]);
-            }
+            // Filtros
+            if (this.state.search) quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
+            if (this.state.filterBlock) quantDomain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
+            if (this.state.filterBundle) quantDomain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
+            if (this.state.selectedCategory) quantDomain.push(['product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
+            if (this.state.selectedProduct) quantDomain.push(['product_id', '=', parseInt(this.state.selectedProduct)]);
 
-            // Obtenemos solo los IDs de lotes válidos
+            // 1. Buscar lotes válidos
             const validQuants = await this.orm.searchRead(
                 "stock.quant", 
                 quantDomain, 
                 ["lot_id"], 
-                { limit: 200 } // Límite razonable para visualización
+                { limit: 300 } 
             );
 
             const validLotIds = validQuants.map(q => q.lot_id[0]);
 
-            // Si no hay lotes disponibles, vaciamos y salimos
             if (validLotIds.length === 0) {
                 this.state.images = [];
                 this.state.loading = false;
                 return;
             }
 
-            // ============================================================
-            // PASO 2: BUSCAR IMÁGENES DE ESOS LOTES
-            // ============================================================
+            // 2. Cargar imágenes de esos lotes
+            // 🚀 OPTIMIZACIÓN DE VELOCIDAD: NO pedimos 'image_small' aquí.
+            // Pedimos 'write_date' para cache busting.
             this.state.images = await this.orm.searchRead(
                 "stock.lot.image", 
                 [['lot_id', 'in', validLotIds]], 
-                ["id", "name", "image_small", "lot_id"], 
+                ["id", "name", "lot_id", "write_date"], 
                 { limit: 200, order: "id desc" }
             );
 
@@ -177,7 +161,6 @@ export class GallerySelector extends Component {
         }
     }
 
-    // --- Eventos ---
     async onCategoryChange(ev) {
         this.state.selectedCategory = ev.target.value;
         this.state.selectedProduct = "";
