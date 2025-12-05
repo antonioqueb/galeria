@@ -27,11 +27,20 @@ $border-color: #2d2d2d;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        /* Permitir que el header use más ancho en pantallas grandes para alinearse con el grid */
         width: 96%;
         max-width: 2500px; 
         margin: 0 auto;
         padding: 0 10px;
+
+        /* CAMBIO: Layout de Grid para Móvil (Título arriba, Cliente abajo) */
+        @include mobile {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            grid-template-areas: 
+                "brand cart"
+                "info info";
+            gap: 5px 15px; /* Espaciado fila/columna */
+        }
     }
 
     .brand {
@@ -40,24 +49,39 @@ $border-color: #2d2d2d;
         letter-spacing: 2px;
         color: $text-white;
         .light { font-weight: 300; color: $text-gray; }
+
+        @include mobile {
+            grid-area: brand;
+            align-self: center;
+        }
     }
 
     .header-actions {
         display: flex;
         align-items: center;
-        gap: 15px; /* Reducido un poco para móvil */
+        gap: 15px;
+
+        /* CAMBIO: Permitir que los hijos se distribuyan en el Grid padre en móvil */
+        @include mobile {
+            display: contents; 
+        }
     }
 
     .client-info {
         text-align: right;
-        /* CAMBIO: Se eliminó display:none para mostrar siempre */
+        
+        /* CAMBIO: Posicionamiento en fila inferior en móvil */
+        @include mobile {
+            grid-area: info;
+            text-align: left; /* Alinear a la izquierda bajo el título */
+            margin-top: 2px;
+        }
         
         .label { 
             font-size: 0.7rem; 
             text-transform: uppercase; 
             color: $text-gray; 
             display: block; 
-            /* En móvil ocultamos el 'Hola,' para ahorrar espacio, solo mostramos nombre */
             @include mobile { display: none; }
         }
         
@@ -67,12 +91,13 @@ $border-color: #2d2d2d;
             color: #fff;
             
             @include mobile {
-                font-size: 0.8rem;
-                max-width: 120px;
+                font-size: 0.85rem;
+                max-width: 100%; /* Permitir ancho completo */
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 display: block;
+                color: lighten($text-gray, 10%); /* Color ligeramente distinto */
             }
         }
     }
@@ -90,16 +115,22 @@ $border-color: #2d2d2d;
         gap: 8px;
         transition: all 0.3s;
 
+        /* CAMBIO: Ubicar el botón en la esquina superior derecha del grid móvil */
+        @include mobile {
+            grid-area: cart;
+            justify-self: end;
+            align-self: center;
+        }
+
         &:hover {
             background: rgba(255,255,255,0.1);
             border-color: $text-white;
         }
 
-        /* CAMBIO: Estado Activo cuando hay productos */
         &.active-cart {
             background-color: $primary;
             border-color: $primary;
-            color: #000; /* Texto oscuro para contraste con dorado */
+            color: #000;
             box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
             
             &:hover {
@@ -119,18 +150,17 @@ $border-color: #2d2d2d;
             padding: 2px 6px;
             border-radius: 10px;
             font-weight: bold;
-            display: none; /* JS lo muestra */
+            display: none;
         }
     }
 }
 
 /* Container */
 .content-container {
-    /* CAMBIO: Grid Fluido para que llene la pantalla al hacer Zoom Out */
     width: 96%;
-    max-width: 2500px; /* Aumentado drásticamente para pantallas ultra-wide o zoom out */
+    max-width: 2500px;
     margin: 0 auto;
-    padding: 40px 10px; /* Reducido padding lateral */
+    padding: 40px 10px;
 }
 
 /* Titles */
@@ -150,14 +180,12 @@ $border-color: #2d2d2d;
 /* Bento Grid */
 .bento-grid {
     display: grid;
-    /* CAMBIO: minmax ajustado a 240px. El auto-fill funcionará mejor con el contenedor fluido */
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     grid-auto-rows: 320px;
     grid-auto-flow: dense;
     gap: 20px;
 
     @include mobile {
-        /* MANTENEMOS: 2 columnas fijas en móvil como se solicitó */
         grid-template-columns: repeat(2, 1fr);
         grid-auto-rows: 240px;
         gap: 10px;
@@ -175,7 +203,6 @@ $border-color: #2d2d2d;
     &:hover { transform: translateY(-4px); border-color: #555; }
     
     &.bento-large {
-        /* Solo aplicar span en pantallas donde caben al menos 2 columnas */
         @media (min-width: 600px) {
             grid-column: span 2;
             grid-row: span 2;
@@ -203,7 +230,6 @@ $border-color: #2d2d2d;
 
     &:hover img { transform: scale(1.05); }
 
-    /* Botón Expandir sobre la imagen */
     .card-actions {
         position: absolute;
         top: 10px;
@@ -214,7 +240,6 @@ $border-color: #2d2d2d;
 
     &:hover .card-actions { opacity: 1; }
     
-    /* En móvil, mostrar acciones siempre (difícil hacer hover) */
     @include mobile {
          .card-actions { opacity: 1; }
     }
@@ -245,7 +270,7 @@ $border-color: #2d2d2d;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        flex: 1; /* Ocupar espacio disponible */
+        flex: 1;
         margin-right: 5px;
         
         .product-name {
@@ -300,7 +325,7 @@ $border-color: #2d2d2d;
             background: #28a745;
             border-color: #28a745;
             color: #fff;
-            i::before { content: "\f00c"; } /* Check icon */
+            i::before { content: "\f00c"; } 
         }
     }
 }
