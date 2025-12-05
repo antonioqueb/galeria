@@ -20,7 +20,6 @@
                     </select>
                 </div>
 
-                <!-- CAMBIO: Producto ahora es Input Text -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Producto</label>
                     <div class="input-group input-group-sm">
@@ -70,10 +69,10 @@
                 <div class="o_gallery_topbar px-4 py-2 bg-white border-bottom d-flex justify-content-between align-items-center shadow-sm">
                     <div class="d-flex align-items-center gap-3">
                         <div class="form-check m-0">
+                            <!-- CORRECCIÓN: &gt; en lugar de > y lógica simplificada -->
                             <input class="form-check-input" type="checkbox" id="selectAll" 
                                    t-on-change="selectAll" 
-                                   t-att-checked="state.allItems.length > 0 and state.allItems.length == 0"/> 
-                                   <!-- Simplificación visual del selectAll, lógica compleja omitida por brevedad -->
+                                   t-att-checked="state.allItems.length &gt; 0 and state.selectedIds.size &gt; 0"/>
                             <label class="form-check-label small fw-bold" for="selectAll">Todo</label>
                         </div>
                         <button class="btn btn-link btn-sm text-danger text-decoration-none" 
@@ -106,8 +105,8 @@
                         <t t-foreach="state.visibleItems" t-as="item" t-key="item.type + '_' + item.key">
                             <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
                                 
-                                <!-- Determinar si está seleccionado (Bloque o Single) -->
-                                <t t-set="isSelected" t-value="item.type === 'block' ? isBlockSelected(item) : state.selectedIds.has(item.id)"/>
+                                <!-- CORRECCIÓN: Agregado 'this.' a isBlockSelected -->
+                                <t t-set="isSelected" t-value="item.type === 'block' ? this.isBlockSelected(item) : state.selectedIds.has(item.id)"/>
                                 <t t-set="coverId" t-value="item.type === 'block' ? item.cover_id : item.id"/>
 
                                 <div t-attf-class="card h-100 o_gallery_card border-0 shadow-sm #{isSelected ? 'selected' : ''}">
@@ -147,7 +146,7 @@
                                             <t t-esc="item.product_name"/>
                                         </div>
 
-                                        <!-- Info Secundaria: Bloque o Lote -->
+                                        <!-- Info Secundaria -->
                                         <div class="d-flex justify-content-between align-items-center text-muted mb-2">
                                             <span class="text-truncate me-1" t-att-title="item.name">
                                                 <i class="fa fa-tag me-1 text-primary opacity-50"/>
@@ -180,6 +179,7 @@
                         </t>
 
                         <!-- Loader / Empty -->
+                        <!-- CORRECCIÓN: &lt; en lugar de < -->
                         <div t-if="state.visibleItems.length &lt; state.allItems.length" class="col-12 text-center py-3 text-muted">
                             <small>Cargando más...</small>
                         </div>
@@ -209,4 +209,12 @@
                         <option t-att-value="p.id"><t t-esc="p.name"/></option>
                     </t>
                 </select>
-            </
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-light" t-on-click="props.close">Cancelar</button>
+                <button class="btn btn-primary px-4" t-on-click="confirm">Generar Link</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>
