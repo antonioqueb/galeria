@@ -384,6 +384,13 @@ class GalleryApp {
             this.resetZoom();
         }
     }
+    resetZoom() {
+        const img = document.getElementById('lightbox-img');
+        if (img) {
+            img.style.transform = "scale(1)";
+            setTimeout(() => { img.style.transformOrigin = "center center"; }, 300);
+        }
+    }
     zoomImage(e) {
         const img = document.getElementById('lightbox-img');
         if (!img) return;
@@ -392,13 +399,6 @@ class GalleryApp {
         const y = (e.clientY - rect.top) / rect.height * 100;
         img.style.transformOrigin = `${x}% ${y}%`;
         img.style.transform = "scale(2.5)";
-    }
-    resetZoom() {
-        const img = document.getElementById('lightbox-img');
-        if (img) {
-            img.style.transform = "scale(1)";
-            setTimeout(() => { img.style.transformOrigin = "center center"; }, 300);
-        }
     }
     async confirmReservation() {
         if (this.cart.length === 0) return;
