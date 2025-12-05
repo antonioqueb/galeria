@@ -99,7 +99,7 @@ class GalleryShare(models.Model):
     @api.model
     def get_current_company(self):
         """
-        ✅ Helper para obtener la compañía activa desde JS sin depender de 'session' o servicios inestables.
+        ✅ Helper infalible para obtener la compañía activa desde JS.
         """
         return self.env.company.id
 
@@ -125,6 +125,7 @@ class GalleryShare(models.Model):
                  lot_id = original_quant.lot_id.id
 
             # ✅ Búsqueda estricta en la compañía del share
+            # Esto evita apartar quants que existen en otra empresa pero no en esta
             quant = Quant.search([
                 ('lot_id', '=', lot_id),
                 ('company_id', '=', self.company_id.id), # Filtro crítico

@@ -66,17 +66,27 @@ export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
         this.dialog = useService("dialog");
-        this.user = useService("user"); // ✅ Usamos el servicio de usuario robusto
+        // CORRECCIÓN: Eliminamos useService("user") que causaba el crash
         
         this.state = useState({
             images: [],
             categories: [],
             selectedCategory: null,
             selectedIds: new Set(),
-            search: ""
+            search: "",
+            currentCompanyId: null
         });
 
         onWillStart(async () => {
+            // ✅ PASO 1: Obtener compañía activa desde el servidor (Método infalible)
+            try {
+                this.state.currentCompanyId = await this.orm.call("gallery.share", "get_current_company", []);
+                console.log("Compañía activa detectada (Backend):", this.state.currentCompanyId);
+            } catch (e) {
+                console.error("Error crítico obteniendo compañía:", e);
+            }
+
+            // PASO 2: Cargar datos
             await this.loadCategories();
             await this.loadImages();
         });
@@ -97,23 +107,6 @@ export class GallerySelector extends Component {
 
     async loadImages() {
         try {
-            // ✅ CORRECCIÓN: Obtener Company ID de forma segura desde el servicio 'user'
-            // El servicio 'user' expone 'context' que contiene 'allowed_company_ids'
-            let currentCompanyId = null;
-            
-            // Verificación defensiva
-            if (this.user && this.user.context && this.user.context.allowed_company_ids) {
-                currentCompanyId = this.user.context.allowed_company_ids[0];
-            } else if (this.user && this.user.currentCompany) {
-                 // Fallback para algunas versiones
-                 currentCompanyId = this.user.currentCompany.id;
-            }
-
-            if (!currentCompanyId) {
-                console.warn("No se pudo determinar la compañía activa. Mostrando todas las imágenes.");
-                // No retornamos, dejamos que cargue todo por si acaso, o podrías hacer un return;
-            }
-
             // Construcción del dominio
             const domain = [
                 // 2. Ubicación Interna y Stock Físico
@@ -127,9 +120,9 @@ export class GallerySelector extends Component {
                 ['lot_id.quant_ids.x_tiene_hold', '=', false]
             ];
 
-            // 1. Filtrar por compañía actual SI LA TENEMOS
-            if (currentCompanyId) {
-                domain.unshift(['lot_id.quant_ids.company_id', '=', currentCompanyId]);
+            // 1. ✅ Filtrar por compañía actual (obtenida del servidor)
+            if (this.state.currentCompanyId) {
+                domain.unshift(['lot_id.quant_ids.company_id', '=', this.state.currentCompanyId]);
             }
 
             if (this.state.search) {
