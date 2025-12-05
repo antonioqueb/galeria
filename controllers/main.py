@@ -9,7 +9,7 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/view/<string:token>', type='http', auth='public', csrf=False)
     def view_gallery(self, token, **kwargs):
-        # 1. Buscar el share
+        # 1. Buscar el share con permisos elevados
         share = request.env['gallery.share'].sudo().search([
             ('access_token', '=', token)
         ], limit=1)
@@ -22,64 +22,61 @@ class GalleryController(http.Controller):
 
         grouped_images = defaultdict(list)
         
-        # 2. Iterar imágenes y validar disponibilidad REAL
+        # ✅ Forzamos el contexto a la compañía del Share
+        StockQuant = request.env['stock.quant'].sudo().with_company(share.company_id)
+
+        # 2. Iterar imágenes y validar disponibilidad REAL en la EMPRESA CORRECTA
         for image in share.image_ids:
             lot = image.lot_id
             
-            # Buscar el Quant disponible:
-            # - Ubicación Interna
-            # - Stock físico > 0
-            # - Sin reserva de sistema (reserved_quantity = 0)
-            # - Sin Hold manual (x_tiene_hold = False)
-            quant = request.env['stock.quant'].sudo().search([
+            # ✅ Búsqueda estricta por compañía
+            quant = StockQuant.search([
                 ('lot_id', '=', lot.id),
+                ('company_id', '=', share.company_id.id), # 🔒 FILTRO DE EMPRESA
                 ('location_id.usage', '=', 'internal'),
                 ('quantity', '>', 0),
                 ('reserved_quantity', '=', 0),
                 ('x_tiene_hold', '=', False)
             ], limit=1)
 
-            # Si no hay stock libre, NO mostrar la imagen en la galería
+            # Si no hay stock libre EN ESTA EMPRESA, se oculta la imagen
+            # Esto previene que el cliente vea algo que no puede apartar
             if not quant:
                 continue
 
             categ = lot.product_id.categ_id
             categ_name = categ.name if categ else "General"
             
-            # Calcular área (usando dimensiones si existen, o cantidad del quant)
             area = 0.0
             if hasattr(lot, 'x_alto') and hasattr(lot, 'x_ancho'):
                 area = (lot.x_alto or 0) * (lot.x_ancho or 0)
             
-            # Si no hay dimensiones registradas, usamos la cantidad del sistema
             if area <= 0: 
                 area = quant.quantity
 
-            # Construir objeto de datos para el Frontend
             img_data = {
                 'id': image.id,
-                'quant_id': quant.id,      # CRUCIAL para la reserva
+                'quant_id': quant.id,
                 'lot_id': lot.id,
                 'name': lot.product_id.name,
                 'lot_name': lot.name,
                 'dimensions': f"{lot.x_alto:.2f} x {lot.x_ancho:.2f} m" if hasattr(lot, 'x_alto') else "",
                 'area': round(area, 2),
                 'url': f"/gallery/image/{token}/{image.id}",
-                'is_large': image.sequence % 5 == 0  # Patrón visual para el grid
+                'is_large': image.sequence % 5 == 0
             }
             grouped_images[categ_name].append(img_data)
 
         values = {
             'share': share,
             'grouped_images': dict(grouped_images),
-            'company': share.user_id.company_id or request.env.company,
-            'token': token  # Pasamos el token para las llamadas API posteriores
+            'company': share.company_id, # Usar la compañía del share
+            'token': token
         }
         return request.render('galeria.gallery_public_view', values)
 
     @http.route('/gallery/image/<string:token>/<int:image_id>', type='http', auth='public')
     def view_gallery_image(self, token, image_id, **kwargs):
-        """Sirve la imagen binaria validando el token."""
         share = request.env['gallery.share'].sudo().search([
             ('access_token', '=', token)
         ], limit=1)
@@ -87,7 +84,6 @@ class GalleryController(http.Controller):
         if not share or share.is_expired:
             return request.not_found()
 
-        # Verificar que la imagen pertenece a esta galería
         if image_id not in share.image_ids.ids:
             return request.not_found()
 
@@ -105,9 +101,6 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/confirm_reservation', type='json', auth='public')
     def confirm_reservation(self, token, items):
-        """
-        Endpoint JSON-RPC llamado por el carrito JS para confirmar.
-        """
         share = request.env['gallery.share'].sudo().search([
             ('access_token', '=', token)
         ], limit=1)
@@ -122,7 +115,6 @@ class GalleryController(http.Controller):
             return {'success': False, 'message': 'El carrito está vacío.'}
 
         try:
-            # Delegar lógica compleja al modelo
             return share.create_public_hold_order(items)
         except Exception as e:
             return {'success': False, 'message': str(e)}

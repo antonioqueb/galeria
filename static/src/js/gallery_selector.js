@@ -4,6 +4,7 @@ import { registry } from "@web/core/registry";
 import { Component, useState, onWillStart } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
+import { session } from "@web/session";
 
 // Componente para el Modal de Crear Link
 class CreateLinkDialog extends Component {
@@ -17,10 +18,8 @@ class CreateLinkDialog extends Component {
             partners: []
         });
 
-        // Cargar partners al iniciar el componente
         onWillStart(async () => {
             try {
-                // Traer todos los contactos sin filtrar por rango, ordenados por nombre
                 this.state.partners = await this.orm.searchRead(
                     "res.partner", 
                     [], 
@@ -48,7 +47,6 @@ class CreateLinkDialog extends Component {
 
             this.props.close();
             
-            // Redirigir al registro creado
             this.action.doAction({
                 type: 'ir.actions.act_window',
                 res_model: 'gallery.share',
@@ -69,9 +67,11 @@ export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
         this.dialog = useService("dialog");
+        this.companyService = useService("company"); // Servicio de compañía
+        
         this.state = useState({
             images: [],
-            categories: [], // Lista de categorías
+            categories: [],
             selectedCategory: null,
             selectedIds: new Set(),
             search: ""
@@ -85,7 +85,6 @@ export class GallerySelector extends Component {
 
     async loadCategories() {
         try {
-            // Cargar categorías para el filtro
             this.state.categories = await this.orm.searchRead(
                 "product.category",
                 [],
@@ -99,31 +98,34 @@ export class GallerySelector extends Component {
 
     async loadImages() {
         try {
-            // CONSTRUCCIÓN DEL DOMINIO DE DISPONIBILIDAD
-            // Filtramos imágenes asociadas a lotes que tengan stock disponible real
+            // ✅ Obtener la compañía activa actual de la sesión
+            // Esto es crítico para no mostrar placas de la Empresa B estando en la Empresa A
+            const currentCompanyId = this.companyService.currentCompany.id || session.user_context.allowed_company_ids[0];
+
+            // CONSTRUCCIÓN DEL DOMINIO DE DISPONIBILIDAD ESTRICTO
             const domain = [
-                // Stock físico en ubicación interna
+                // 1. Filtrar por compañía actual explícitamente en el quant
+                ['lot_id.quant_ids.company_id', '=', currentCompanyId],
+                
+                // 2. Ubicación Interna y Stock Físico
                 ['lot_id.quant_ids.location_id.usage', '=', 'internal'],
                 ['lot_id.quant_ids.quantity', '>', 0],
                 
-                // Que NO esté reservado por órdenes de venta/entrega
+                // 3. Sin reservas de sistema (En orden de entrega)
                 ['lot_id.quant_ids.reserved_quantity', '=', 0],
                 
-                // Que NO tenga un Hold Manual activo (del módulo stock_lot_dimensions)
+                // 4. Sin Hold Manual activo (Validación de disponibilidad real)
                 ['lot_id.quant_ids.x_tiene_hold', '=', false]
             ];
 
-            // Filtro de Texto (Búsqueda por nombre de lote)
             if (this.state.search) {
                 domain.push(['lot_id.name', 'ilike', this.state.search]);
             }
 
-            // Filtro por Categoría
             if (this.state.selectedCategory) {
                 domain.push(['lot_id.product_id.categ_id', '=', parseInt(this.state.selectedCategory)]);
             }
 
-            // Campos a traer
             const fields = ["id", "name", "image_small", "lot_id"];
             
             this.state.images = await this.orm.searchRead(
