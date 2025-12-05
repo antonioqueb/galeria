@@ -5,7 +5,7 @@ class GalleryApp {
         this.cart = [];
         this.config = window.galleryRawData || {};
         this.cartKey = 'stone_gallery_cart_' + (this.config.token || 'default');
-        this.currentView = 'main';
+        this.currentView = 'main'; // 'main' or 'block'
         
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
@@ -15,13 +15,19 @@ class GalleryApp {
     }
 
     init() {
+        // Cargar carrito previo
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
-            try { this.cart = JSON.parse(savedCart); } catch (e) { this.cart = []; }
+            try {
+                this.cart = JSON.parse(savedCart);
+            } catch (e) {
+                this.cart = [];
+            }
         }
         
+        // Guardar el HTML inicial del grid para restaurarlo rápido al volver
         const container = document.getElementById('main-gallery-container');
-        if(container) {
+        if (container) {
             this.mainGridHTML = container.innerHTML;
         }
 
@@ -32,7 +38,7 @@ class GalleryApp {
 
     bindEvents() {
         document.body.addEventListener('click', (e) => {
-            // 1. Abrir Bloque
+            // 1. Botón Abrir Bloque (Carpeta o Click en imagen de bloque)
             const openBlockBtn = e.target.closest('.open-block-btn');
             if (openBlockBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -41,7 +47,7 @@ class GalleryApp {
                 return;
             }
 
-            // 2. Lightbox
+            // 2. Lightbox (Solo para imágenes simples)
             const lightboxBtn = e.target.closest('.lightbox-trigger');
             if (lightboxBtn) {
                 e.preventDefault(); e.stopPropagation(); 
@@ -49,7 +55,7 @@ class GalleryApp {
                 return;
             }
 
-            // 3. Agregar al Carrito (Bloque o Single)
+            // 3. Agregar al Carrito
             const addBtn = e.target.closest('.btn-add-cart');
             if (addBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -57,7 +63,7 @@ class GalleryApp {
                 return;
             }
 
-            // 4. Volver
+            // 4. Volver a galería principal
             if (e.target.closest('#btn-back-gallery')) {
                 e.preventDefault();
                 this.restoreMainView();
@@ -83,26 +89,28 @@ class GalleryApp {
                 return;
             }
 
-            // 7. Lightbox Close
+            // 7. Close Lightbox
             if (e.target.closest('.close-lightbox')) {
                 this.closeLightbox();
             }
         });
     }
 
-    // --- VISTAS ---
+    // --- Lógica de Vistas (Bloque vs Main) ---
 
     openBlockView(blockId) {
-        // Usamos el ID sanitizado para buscar en el JSON
+        // Buscar en el JSON usando el ID sanitizado
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
         
         if (!details || details.length === 0) {
-            console.warn("No details found for block:", blockId);
+            console.error("No details found for block:", blockId, "Available Keys:", Object.keys(this.config.blocks_details || {}));
+            alert("No se pudieron cargar los detalles del bloque. ID: " + blockId);
             return;
         }
 
         const container = document.getElementById('main-gallery-container');
         
+        // Generar HTML para los items internos
         let html = `
             <div class="category-block">
                 <h2 class="category-title text-primary">
@@ -121,6 +129,7 @@ class GalleryApp {
         container.innerHTML = html;
         container.scrollIntoView({ behavior: 'smooth' });
 
+        // Mostrar botón volver
         const backBtn = document.getElementById('btn-back-gallery');
         if (backBtn) backBtn.style.display = 'flex';
 
@@ -130,7 +139,9 @@ class GalleryApp {
 
     restoreMainView() {
         const container = document.getElementById('main-gallery-container');
-        if(this.mainGridHTML) container.innerHTML = this.mainGridHTML;
+        if (this.mainGridHTML) {
+            container.innerHTML = this.mainGridHTML;
+        }
         
         const backBtn = document.getElementById('btn-back-gallery');
         if (backBtn) backBtn.style.display = 'none';
@@ -140,6 +151,7 @@ class GalleryApp {
     }
 
     renderCardHtml(img) {
+        // Renderiza tarjeta simple (is_large siempre false aquí)
         return `
             <div class="bento-item"
                  data-id="${img.id}"
@@ -179,35 +191,39 @@ class GalleryApp {
         `;
     }
 
-    // --- CARRITO ---
+    // --- Lógica del Carrito ---
 
     handleAddToCartClick(btn) {
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
 
         const type = itemEl.dataset.type;
-        const id = itemEl.dataset.id; // String ID
+        const id = itemEl.dataset.id;
 
+        // Si es un BLOQUE -> Agregamos todos sus hijos
         if (type === 'block') {
-            // --- LÓGICA DE AGREGAR BLOQUE COMPLETO ---
             const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
             
-            if (!details || details.length === 0) return;
+            if (!details || details.length === 0) {
+                console.warn("No children found for cart add on block:", id);
+                return;
+            }
 
+            // Verificar cuántos hijos ya están en el carrito
             const allIds = details.map(d => String(d.id));
             const inCartCount = this.cart.filter(c => allIds.includes(String(c.id))).length;
             
-            // Si TODOS ya están, los quitamos. Si falta alguno, los agregamos.
+            // Lógica Toggle: Si todos están, los quita. Si falta alguno, los agrega.
             if (inCartCount === details.length) {
                 allIds.forEach(childId => this.removeFromCart(childId, false));
             } else {
                 details.forEach(child => {
                     if (!this.cart.find(c => String(c.id) === String(child.id))) {
-                        // Construimos el objeto producto manualmente porque 'child' viene del raw json
+                        // Construir objeto producto
                         this.pushToCart({
                             id: child.id,
                             quant_id: child.quant_id,
-                            name: child.name, // El json de python usa 'name' para producto
+                            name: child.name,
                             lot_name: child.lot_name,
                             dims: child.dimensions,
                             area: parseFloat(child.area),
@@ -219,7 +235,7 @@ class GalleryApp {
             this.saveCart();
 
         } else {
-            // --- LÓGICA SINGLE ---
+            // Es item simple
             const existingIndex = this.cart.findIndex(i => String(i.id) === String(id));
             if (existingIndex > -1) {
                 this.removeFromCart(id);
@@ -261,7 +277,7 @@ class GalleryApp {
     }
 
     updateButtonsState() {
-        // Header
+        // Actualizar contador header
         const counter = document.getElementById('cart-count');
         const cartToggleBtn = document.getElementById('cart-toggle');
         if (counter) {
@@ -272,7 +288,7 @@ class GalleryApp {
             this.cart.length > 0 ? cartToggleBtn.classList.add('active-cart') : cartToggleBtn.classList.remove('active-cart');
         }
 
-        // Grid Items
+        // Actualizar botones del grid
         document.querySelectorAll('.bento-item').forEach(el => {
             const btn = el.querySelector('.btn-add-cart');
             const icon = btn.querySelector('i');
@@ -282,6 +298,7 @@ class GalleryApp {
             let isSelected = false;
 
             if (type === 'block') {
+                // Lógica visual para bloque: ¿Están todos sus hijos en el carrito?
                 const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
                 if (details.length > 0) {
                     const allIds = details.map(d => String(d.id));
@@ -302,14 +319,14 @@ class GalleryApp {
         });
     }
 
-    // Funciones visuales estandar
+    // ... Resto de métodos UI (Lightbox, CartUI, Confirm) ...
     updateCartUI() {
         const container = document.getElementById('cart-items-container');
         if (!container) return;
         container.innerHTML = '';
         let totalArea = 0;
         if (this.cart.length === 0) {
-            container.innerHTML = `<div style="text-align: center; color: #666; padding: 40px 20px;"><i class="fa fa-shopping-basket fa-3x mb-3" style="opacity: 0.3;"></i><p>Vacío</p></div>`;
+            container.innerHTML = `<div style="text-align: center; color: #666; padding: 40px 20px;"><i class="fa fa-shopping-basket fa-3x mb-3" style="opacity: 0.3;"></i><p>Tu selección está vacía.</p></div>`;
         } else {
             this.cart.forEach(item => {
                 totalArea += item.area;
@@ -367,13 +384,6 @@ class GalleryApp {
             this.resetZoom();
         }
     }
-    resetZoom() {
-        const img = document.getElementById('lightbox-img');
-        if (img) {
-            img.style.transform = "scale(1)";
-            setTimeout(() => { img.style.transformOrigin = "center center"; }, 300);
-        }
-    }
     zoomImage(e) {
         const img = document.getElementById('lightbox-img');
         if (!img) return;
@@ -382,6 +392,13 @@ class GalleryApp {
         const y = (e.clientY - rect.top) / rect.height * 100;
         img.style.transformOrigin = `${x}% ${y}%`;
         img.style.transform = "scale(2.5)";
+    }
+    resetZoom() {
+        const img = document.getElementById('lightbox-img');
+        if (img) {
+            img.style.transform = "scale(1)";
+            setTimeout(() => { img.style.transformOrigin = "center center"; }, 300);
+        }
     }
     async confirmReservation() {
         if (this.cart.length === 0) return;
@@ -407,4 +424,5 @@ class GalleryApp {
         finally { if (btn) { btn.innerText = originalText; btn.disabled = false; } }
     }
 }
+
 window.gallery = new GalleryApp();
