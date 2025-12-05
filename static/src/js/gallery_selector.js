@@ -1,12 +1,12 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { Component, useState, onWillStart } from "@odoo/owl";
+import { Component, useState, onWillStart, useRef } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
 import { useDebounced } from "@web/core/utils/timing";
 
-// --- Componente Modal ---
+// --- Componente Modal (Sin cambios) ---
 class CreateLinkDialog extends Component {
     setup() {
         this.orm = useService("orm");
@@ -54,25 +54,28 @@ export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
         this.dialog = useService("dialog");
+        this.scrollRef = useRef("scrollContainer");
         
         this.state = useState({
-            images: [],
+            allImages: [],      // Todas las imágenes encontradas (metadata)
+            visibleImages: [],  // Solo las que se renderizan (Paginación)
+            pageSize: 40,       // Cantidad por página
+            currentPage: 1,
+            
             categories: [],
             products: [],
             
-            // Filtros
             selectedCategory: "",
             selectedProduct: "",
             filterBlock: "",
             filterBundle: "",
-            search: "", // Lote
+            search: "",
             
             selectedIds: new Set(),
             currentCompanyId: null,
             loading: false
         });
 
-        // Debounce para no saturar el servidor al escribir
         this.debouncedLoad = useDebounced(() => this.loadImages(), 500);
 
         onWillStart(async () => {
@@ -105,54 +108,54 @@ export class GallerySelector extends Component {
 
     async loadImages() {
         this.state.loading = true;
+        this.state.currentPage = 1; // Reset paginación
+        
         try {
-            // ============================================================
-            // ESTRATEGIA DE DISPONIBILIDAD ESTRICTA
-            // ============================================================
-            
             const quantDomain = [
                 ['location_id.usage', '=', 'internal'],
                 ['quantity', '>', 0],
-                ['reserved_quantity', '=', 0],  // Sin reserva de sistema
-                ['x_tiene_hold', '=', false]    // Sin apartado manual
+                ['reserved_quantity', '=', 0],  
+                ['x_tiene_hold', '=', false]    
             ];
 
             if (this.state.currentCompanyId) {
                 quantDomain.unshift(['company_id', '=', this.state.currentCompanyId]);
             }
 
-            // Filtros
             if (this.state.search) quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
             if (this.state.filterBlock) quantDomain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
             if (this.state.filterBundle) quantDomain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
             if (this.state.selectedCategory) quantDomain.push(['product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
             if (this.state.selectedProduct) quantDomain.push(['product_id', '=', parseInt(this.state.selectedProduct)]);
 
-            // 1. Buscar lotes válidos
+            // 1. Buscar IDs de Lotes
             const validQuants = await this.orm.searchRead(
                 "stock.quant", 
                 quantDomain, 
                 ["lot_id"], 
-                { limit: 300 } 
+                { limit: 1000 } // Límite más alto para tener buen pool
             );
 
             const validLotIds = validQuants.map(q => q.lot_id[0]);
 
             if (validLotIds.length === 0) {
-                this.state.images = [];
+                this.state.allImages = [];
+                this.state.visibleImages = [];
                 this.state.loading = false;
                 return;
             }
 
-            // 2. Cargar imágenes de esos lotes
-            // 🚀 OPTIMIZACIÓN DE VELOCIDAD: NO pedimos 'image_small' aquí.
-            // Pedimos 'write_date' para cache busting.
-            this.state.images = await this.orm.searchRead(
+            // 2. Cargar Metadata de Imágenes (SIN BLOB)
+            // Esto es muy rápido porque solo trae texto y fechas
+            this.state.allImages = await this.orm.searchRead(
                 "stock.lot.image", 
                 [['lot_id', 'in', validLotIds]], 
                 ["id", "name", "lot_id", "write_date"], 
-                { limit: 200, order: "id desc" }
+                { limit: 1000, order: "id desc" }
             );
+
+            // 3. Cargar primera página
+            this.loadMoreImages();
 
         } catch (e) {
             console.error("Error loading images:", e);
@@ -160,6 +163,25 @@ export class GallerySelector extends Component {
             this.state.loading = false;
         }
     }
+
+    loadMoreImages() {
+        const start = 0;
+        const end = this.state.currentPage * this.state.pageSize;
+        this.state.visibleImages = this.state.allImages.slice(start, end);
+    }
+
+    onScroll(ev) {
+        const el = ev.target;
+        // Si el usuario está cerca del final del scroll, cargar más
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+            if (this.state.visibleImages.length < this.state.allImages.length) {
+                this.state.currentPage++;
+                this.loadMoreImages();
+            }
+        }
+    }
+
+    // --- Eventos UI ---
 
     async onCategoryChange(ev) {
         this.state.selectedCategory = ev.target.value;
@@ -187,7 +209,7 @@ export class GallerySelector extends Component {
     }
 
     selectAll() {
-        this.state.images.forEach(img => this.state.selectedIds.add(img.id));
+        this.state.allImages.forEach(img => this.state.selectedIds.add(img.id));
     }
 
     clearSelection() {

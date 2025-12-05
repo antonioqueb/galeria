@@ -54,8 +54,10 @@
                 </div>
 
                 <div class="mt-auto p-2 bg-light rounded border text-center">
-                    <small class="text-muted d-block">Resultados:</small>
-                    <strong class="text-primary"><t t-esc="state.images.length"/> placas disponibles</strong>
+                    <small class="text-muted d-block">Mostrando:</small>
+                    <strong class="text-primary">
+                        <t t-esc="state.visibleImages.length"/> / <t t-esc="state.allImages.length"/> placas
+                    </strong>
                 </div>
             </div>
 
@@ -67,7 +69,7 @@
                     <div class="d-flex align-items-center gap-3">
                         <div class="form-check m-0">
                             <input class="form-check-input" type="checkbox" id="selectAll" 
-                                   t-on-change="selectAll" t-att-checked="state.images.length > 0 &amp;&amp; state.selectedIds.size === state.images.length"/>
+                                   t-on-change="selectAll" t-att-checked="state.allImages.length > 0 &amp;&amp; state.selectedIds.size === state.allImages.length"/>
                             <label class="form-check-label small fw-bold" for="selectAll">Seleccionar Todo</label>
                         </div>
                         <button class="btn btn-link btn-sm text-danger text-decoration-none" 
@@ -85,27 +87,26 @@
                     </div>
                 </div>
 
-                <!-- Grid de Imágenes -->
-                <div class="o_gallery_content p-4 flex-grow-1 overflow-auto">
+                <!-- Grid de Imágenes Scrollable -->
+                <div class="o_gallery_content p-4 flex-grow-1 overflow-auto" 
+                     t-ref="scrollContainer" 
+                     t-on-scroll="onScroll">
                     
-                    <!-- Loading -->
+                    <!-- Loading Inicial -->
                     <div t-if="state.loading" class="d-flex flex-column align-items-center justify-content-center mt-5 text-muted">
                         <div class="spinner-border text-primary" role="status"></div>
                         <p class="mt-3">Buscando placas disponibles...</p>
                     </div>
 
-                    <!-- Grid -->
+                    <!-- Grid Paginado -->
                     <div t-else="" class="row g-3">
-                        <t t-foreach="state.images" t-as="img" t-key="img.id">
+                        <t t-foreach="state.visibleImages" t-as="img" t-key="img.id">
                             <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
                                 <div t-attf-class="card h-100 o_gallery_card border-0 shadow-sm #{state.selectedIds.has(img.id) ? 'selected' : ''}"
                                      t-on-click="() => this.toggleSelection(img.id)">
                                     
-                                    <!-- Header Imagen (OPTIMIZADO) -->
+                                    <!-- Header Imagen Optimizado -->
                                     <div class="card-img-top position-relative bg-200 d-flex align-items-center justify-content-center" style="height: 180px; overflow: hidden;">
-                                        <!-- 
-                                             🚀 URL directa para carga rápida + Lazy Loading + Cache Busting
-                                        -->
                                         <img t-att-src="'/web/image/stock.lot.image/' + img.id + '/image_small?unique=' + (img.write_date || '')"
                                              loading="lazy"
                                              class="w-100 h-100 object-fit-cover transition-zoom"/>
@@ -132,8 +133,13 @@
                             </div>
                         </t>
                         
+                        <!-- Loader de Paginación -->
+                        <div t-if="state.visibleImages.length < state.allImages.length" class="col-12 text-center py-3 text-muted">
+                            <small>Cargando más imágenes...</small>
+                        </div>
+
                         <!-- Empty State -->
-                        <div t-if="!state.loading and state.images.length === 0" class="col-12 text-center mt-5 text-muted">
+                        <div t-if="!state.loading and state.allImages.length === 0" class="col-12 text-center mt-5 text-muted">
                             <div class="py-5">
                                 <i class="fa fa-search fa-3x mb-3 opacity-50"/>
                                 <h4>No hay placas disponibles</h4>
