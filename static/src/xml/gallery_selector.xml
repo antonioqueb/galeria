@@ -35,16 +35,18 @@
                     <label class="form-label fw-bold text-uppercase small text-muted">Lote / Serie</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light"><i class="fa fa-barcode"/></span>
+                        <!-- CORRECCIÓN: t-att-value en lugar de t-value -->
                         <input type="text" class="form-control" placeholder="Ej. L-1024..." 
-                               t-value="state.search"
+                               t-att-value="state.search"
                                t-on-input="(ev) => this.onInputSearch(ev, 'search')"/>
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-bold text-uppercase small text-muted">Bloque</label>
+                    <!-- CORRECCIÓN: t-att-value en lugar de t-value -->
                     <input type="text" class="form-control form-control-sm" placeholder="Ej. B-05..." 
-                           t-value="state.filterBlock"
+                           t-att-value="state.filterBlock"
                            t-on-input="(ev) => this.onInputSearch(ev, 'filterBlock')"/>
                 </div>
 
@@ -69,7 +71,7 @@
                 <div class="o_gallery_topbar px-4 py-2 bg-white border-bottom d-flex justify-content-between align-items-center shadow-sm">
                     <div class="d-flex align-items-center gap-3">
                         <div class="form-check m-0">
-                            <!-- CORRECCIÓN: &gt; en lugar de > y lógica simplificada -->
+                            <!-- Checkbox Todo: Lógica simplificada -->
                             <input class="form-check-input" type="checkbox" id="selectAll" 
                                    t-on-change="selectAll" 
                                    t-att-checked="state.allItems.length &gt; 0 and state.selectedIds.size &gt; 0"/>
@@ -105,7 +107,7 @@
                         <t t-foreach="state.visibleItems" t-as="item" t-key="item.type + '_' + item.key">
                             <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
                                 
-                                <!-- CORRECCIÓN: Agregado 'this.' a isBlockSelected -->
+                                <!-- Variables de estado -->
                                 <t t-set="isSelected" t-value="item.type === 'block' ? this.isBlockSelected(item) : state.selectedIds.has(item.id)"/>
                                 <t t-set="coverId" t-value="item.type === 'block' ? item.cover_id : item.id"/>
 
@@ -179,7 +181,6 @@
                         </t>
 
                         <!-- Loader / Empty -->
-                        <!-- CORRECCIÓN: &lt; en lugar de < -->
                         <div t-if="state.visibleItems.length &lt; state.allItems.length" class="col-12 text-center py-3 text-muted">
                             <small>Cargando más...</small>
                         </div>
