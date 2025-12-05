@@ -16,6 +16,7 @@
     'depends': ['base', 'web', 'stock', 'stock_lot_dimensions', 'website', 'inventory_shopping_cart'],
     'data': [
         'security/ir.model.access.csv',
+        'data/gallery_sequence.xml',
         'views/gallery_share_views.xml',
         'views/gallery_menus.xml',
         'views/gallery_public_template.xml',
