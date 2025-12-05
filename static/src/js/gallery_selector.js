@@ -67,7 +67,7 @@ export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
         this.dialog = useService("dialog");
-        this.companyService = useService("company"); // Servicio de compañía
+        // CORRECCIÓN: Eliminamos la dependencia de useService("company") que causaba el error
         
         this.state = useState({
             images: [],
@@ -98,9 +98,9 @@ export class GallerySelector extends Component {
 
     async loadImages() {
         try {
-            // ✅ Obtener la compañía activa actual de la sesión
-            // Esto es crítico para no mostrar placas de la Empresa B estando en la Empresa A
-            const currentCompanyId = this.companyService.currentCompany.id || session.user_context.allowed_company_ids[0];
+            // CORRECCIÓN: Usamos session directamente para obtener la compañía.
+            // session.user_context.allowed_company_ids es un array, el [0] es la actual.
+            const currentCompanyId = session.user_context.allowed_company_ids[0];
 
             // CONSTRUCCIÓN DEL DOMINIO DE DISPONIBILIDAD ESTRICTO
             const domain = [
