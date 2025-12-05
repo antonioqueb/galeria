@@ -1,12 +1,12 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { Component, useState, onWillStart, onWillUpdateProps } from "@odoo/owl";
+import { Component, useState, onWillStart } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
 import { useDebounced } from "@web/core/utils/timing";
 
-// --- Componente Modal (Sin cambios mayores, solo cosméticos) ---
+// --- Componente Modal ---
 class CreateLinkDialog extends Component {
     setup() {
         this.orm = useService("orm");
@@ -58,21 +58,17 @@ export class GallerySelector extends Component {
         this.state = useState({
             images: [],
             categories: [],
-            products: [], // Lista de productos filtrada
-            
-            // Filtros
+            products: [],
             selectedCategory: "",
             selectedProduct: "",
             filterBlock: "",
             filterBundle: "",
-            search: "", // Búsqueda general por lote
-            
+            search: "",
             selectedIds: new Set(),
             currentCompanyId: null,
             loading: false
         });
 
-        // Crear versión debounced de la carga para inputs de texto
         this.debouncedLoad = useDebounced(() => this.loadImages(), 500);
 
         onWillStart(async () => {
@@ -86,22 +82,60 @@ export class GallerySelector extends Component {
     }
 
     async loadCategories() {
-        this.state.categories = await this.orm.searchRead("product.category", [], ["id", "name"], { order: "name" });
+        try {
+            // 1. Buscar la categoría padre "Placas" (ajusta el nombre si es diferente en tu BD)
+            // Buscamos por nombre 'Placas' o 'Placa'
+            const parentCategs = await this.orm.searchRead(
+                "product.category", 
+                [['name', 'ilike', 'Placas']], 
+                ["id"], 
+                { limit: 1 }
+            );
+
+            let domain = [];
+            if (parentCategs.length > 0) {
+                // Si existe 'Placas', traer solo sus hijas (child_of incluye al padre)
+                domain = [['parent_id', 'child_of', parentCategs[0].id]];
+            } else {
+                // Fallback: Si no encuentra "Placas", traer todas (o podrías dejarlo vacío)
+                console.warn("Categoría 'Placas' no encontrada, mostrando todas.");
+            }
+
+            this.state.categories = await this.orm.searchRead(
+                "product.category", 
+                domain, 
+                ["id", "name"], 
+                { order: "name" }
+            );
+        } catch (e) {
+            console.error("Error cargando categorías:", e);
+        }
     }
 
     async loadProducts() {
-        // Cargar productos según la categoría seleccionada
-        const domain = [('sale_ok', '=', true)];
+        // ✅ CORRECCIÓN: El dominio debe ser explícito. 
+        // Usamos 1 en lugar de true para evitar problemas de serialización en algunas versiones
+        const domain = [['sale_ok', '=', true]]; 
+        
         if (this.state.selectedCategory) {
             domain.push(['categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
         }
-        this.state.products = await this.orm.searchRead("product.product", domain, ["id", "name", "default_code"], { limit: 100, order: "name" });
+        
+        try {
+            this.state.products = await this.orm.searchRead(
+                "product.product", 
+                domain, 
+                ["id", "name", "default_code"], 
+                { limit: 100, order: "name" }
+            );
+        } catch (e) {
+            console.error("Error cargando productos:", e);
+        }
     }
 
     async loadImages() {
         this.state.loading = true;
         try {
-            // 1. Dominio Base (Disponibilidad)
             const domain = [
                 ['lot_id.quant_ids.location_id.usage', '=', 'internal'],
                 ['lot_id.quant_ids.quantity', '>', 0],
@@ -113,7 +147,6 @@ export class GallerySelector extends Component {
                 domain.unshift(['lot_id.quant_ids.company_id', '=', this.state.currentCompanyId]);
             }
 
-            // 2. Filtros Dinámicos
             if (this.state.search) {
                 domain.push(['lot_id.name', 'ilike', this.state.search]);
             }
@@ -130,9 +163,6 @@ export class GallerySelector extends Component {
                 domain.push(['lot_id.product_id', '=', parseInt(this.state.selectedProduct)]);
             }
 
-            // 3. Ejecutar búsqueda
-            // Nota: No podemos obtener x_bloque directamente de stock.lot.image sin campos relacionados,
-            // pero el filtro funciona. Para visualización usamos el nombre del lote.
             this.state.images = await this.orm.searchRead(
                 "stock.lot.image", 
                 domain, 
@@ -146,12 +176,10 @@ export class GallerySelector extends Component {
         }
     }
 
-    // --- Manejadores de Eventos ---
-
     async onCategoryChange(ev) {
         this.state.selectedCategory = ev.target.value;
-        this.state.selectedProduct = ""; // Resetear producto
-        await this.loadProducts();
+        this.state.selectedProduct = "";
+        await this.loadProducts(); // Ahora esto debería funcionar sin error RPC
         await this.loadImages();
     }
 
@@ -162,7 +190,7 @@ export class GallerySelector extends Component {
 
     onInputSearch(ev, field) {
         this.state[field] = ev.target.value;
-        this.debouncedLoad(); // Usar debounce para no saturar
+        this.debouncedLoad();
     }
 
     toggleSelection(imgId) {

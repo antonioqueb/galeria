@@ -9,7 +9,6 @@ class GalleryController(http.Controller):
 
     @http.route('/gallery/view/<string:token>', type='http', auth='public', csrf=False)
     def view_gallery(self, token, **kwargs):
-        # 1. Buscar el share
         share = request.env['gallery.share'].sudo().search([
             ('access_token', '=', token)
         ], limit=1)
@@ -21,25 +20,20 @@ class GalleryController(http.Controller):
             return request.render('galeria.gallery_expired', {'share': share})
 
         grouped_images = defaultdict(list)
-        
-        # ✅ Forzamos el entorno a la compañía del share
         StockQuant = request.env['stock.quant'].sudo().with_company(share.company_id)
 
-        # 2. Iterar imágenes y validar disponibilidad REAL en la EMPRESA CORRECTA
         for image in share.image_ids:
             lot = image.lot_id
             
-            # ✅ Búsqueda estricta por compañía
             quant = StockQuant.search([
                 ('lot_id', '=', lot.id),
-                ('company_id', '=', share.company_id.id), # Filtro de empresa
+                ('company_id', '=', share.company_id.id),
                 ('location_id.usage', '=', 'internal'),
                 ('quantity', '>', 0),
                 ('reserved_quantity', '=', 0),
                 ('x_tiene_hold', '=', False)
             ], limit=1)
 
-            # Si no hay stock libre EN ESTA EMPRESA, se oculta la imagen
             if not quant:
                 continue
 
@@ -113,7 +107,27 @@ class GalleryController(http.Controller):
         if not items:
             return {'success': False, 'message': 'El carrito está vacío.'}
 
+        # ✅ CORRECCIÓN: Limpieza y validación de datos antes de enviarlos al modelo
+        clean_items = []
+        for item in items:
+            # Asegurar que quant_id existe y es convertible a int
+            q_id = item.get('quant_id')
+            l_id = item.get('lot_id')
+            
+            if q_id and str(q_id).isdigit():
+                # Si lot_id viene sucio, lo dejamos pasar, el modelo lo recalcula
+                clean_items.append({
+                    'quant_id': int(q_id),
+                    'lot_id': int(l_id) if l_id and str(l_id).isdigit() else 0,
+                    'name': item.get('name', 'Producto')
+                })
+
+        if not clean_items:
+            return {'success': False, 'message': 'Datos de items inválidos.'}
+
         try:
-            return share.create_public_hold_order(items)
+            return share.create_public_hold_order(clean_items)
         except Exception as e:
+            # Loguear el error real en consola para debugging
+            print(f"Gallery Reservation Error: {str(e)}")
             return {'success': False, 'message': str(e)}

@@ -4,6 +4,9 @@ from datetime import timedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from odoo.http import request
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class GalleryShare(models.Model):
     _name = 'gallery.share'
@@ -99,7 +102,7 @@ class GalleryShare(models.Model):
     @api.model
     def get_current_company(self):
         """
-        ✅ Helper infalible para obtener la compañía activa desde JS.
+        ✅ Helper infalible para obtener la compañía activa desde JS sin errores de servicio.
         """
         return self.env.company.id
 
@@ -118,23 +121,33 @@ class GalleryShare(models.Model):
         hold_lines = []
 
         for item in items:
-            lot_id = int(item.get('lot_id'))
-            if not lot_id and item.get('quant_id'):
-                 # Fallback por si el JS antiguo manda quant_id
-                 original_quant = Quant.browse(int(item.get('quant_id')))
-                 lot_id = original_quant.lot_id.id
+            # ✅ Conversión Defensiva para evitar error 'int() argument must be...'
+            raw_lot_id = item.get('lot_id')
+            raw_quant_id = item.get('quant_id')
+            
+            lot_id = int(raw_lot_id) if raw_lot_id else False
+            quant_id_search = int(raw_quant_id) if raw_quant_id else False
+
+            # Fallback: si no hay lot_id pero sí quant_id, buscamos el lote
+            if not lot_id and quant_id_search:
+                 original_quant = Quant.browse(quant_id_search)
+                 if original_quant.exists():
+                    lot_id = original_quant.lot_id.id
+
+            # Si después de todo no tenemos lote, saltamos este item
+            if not lot_id:
+                continue
 
             # ✅ Búsqueda estricta en la compañía del share
-            # Esto evita apartar quants que existen en otra empresa pero no en esta
             quant = Quant.search([
                 ('lot_id', '=', lot_id),
-                ('company_id', '=', self.company_id.id), # Filtro crítico
+                ('company_id', '=', self.company_id.id), # Filtro crítico de empresa
                 ('location_id.usage', '=', 'internal'),
                 ('quantity', '>', 0)
             ], limit=1)
             
             if not quant:
-                raise UserError(f"El material {item.get('name')} ya no está disponible en este almacén.")
+                raise UserError(f"El material {item.get('name', 'seleccionado')} ya no está disponible en este almacén.")
             
             # Validación estricta de disponibilidad
             if quant.reserved_quantity > 0 or quant.x_tiene_hold:
@@ -158,7 +171,7 @@ class GalleryShare(models.Model):
             }))
 
         if not hold_lines:
-            raise UserError("No se pudieron procesar los items seleccionados.")
+            raise UserError("No se pudieron procesar los items seleccionados. Es posible que ya no estén disponibles.")
 
         try:
             # Crear la Orden de Reserva vinculada a la empresa correcta
@@ -181,4 +194,5 @@ class GalleryShare(models.Model):
             }
 
         except Exception as e:
+            _logger.error(f"Error creando reserva pública: {str(e)}")
             raise UserError(f"Error al procesar la reserva: {str(e)}")
