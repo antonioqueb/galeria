@@ -9,12 +9,9 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
                 <title t-esc="title or 'Galería de Placas'"/>
                 
-                <!-- Google Fonts -->
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&amp;display=swap" rel="stylesheet"/>
-                <!-- FontAwesome para iconos -->
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
                 
-                <!-- CSS de Odoo y del Módulo -->
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
                 
                 <style>
@@ -34,7 +31,6 @@
                 <main>
                     <t t-out="0"/>
                 </main>
-                <!-- JS de Odoo y del Módulo -->
                 <t t-call-assets="web.assets_frontend" t-css="false"/>
             </body>
         </html>
@@ -45,11 +41,9 @@
         <t t-call="galeria.gallery_layout_headless">
             <t t-set="title" t-value="share.name"/>
             
-            <!-- Inyectar Configuración para JS -->
+            <!-- DATA ISLAND: Datos completos para manipulación JS -->
             <script>
-                window.galleryConfig = {
-                    token: "<t t-esc="token"/>"
-                };
+                window.galleryRawData = <t t-out="json_data"/>;
             </script>
 
             <div class="gallery-wrapper">
@@ -57,8 +51,15 @@
                 <header class="gallery-header">
                     <div class="container-fluid">
                         <div class="header-content">
-                            <div class="brand">
-                                <span class="logo-text">RECUBRIMIENTOS <span class="light">GALLERY</span></span>
+                            <!-- Zona de Título / Botón Volver -->
+                            <div class="brand-area d-flex align-items-center gap-3">
+                                <!-- Botón Volver (Oculto por defecto) -->
+                                <button id="btn-back-gallery" class="btn-back" style="display: none;">
+                                    <i class="fa fa-arrow-left"></i> Volver
+                                </button>
+                                <div class="brand">
+                                    <span class="logo-text">RECUBRIMIENTOS <span class="light">GALLERY</span></span>
+                                </div>
                             </div>
                             
                             <div class="header-actions">
@@ -76,22 +77,20 @@
                 </header>
 
                 <!-- Contenedor Principal -->
-                <div class="container content-container">
+                <div class="container content-container" id="main-gallery-container">
+                    
+                    <!-- Renderizado Inicial (Se sobreescribe con JS si se entra a un bloque) -->
                     <t t-foreach="grouped_images" t-as="category">
-                        <div class="category-block">
+                        <div class="category-block" t-att-data-category="category">
                             <h2 class="category-title"><t t-esc="category"/> <span class="line"></span></h2>
                             
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
-                                    <!-- 
-                                        CORRECCIÓN CRÍTICA AQUÍ: 
-                                        Hemos fusionado 'class' y 't-attf-class' en una sola línea.
-                                        Esto asegura que la clase 'bento-item' siempre exista.
-                                    -->
-                                    <div t-attf-class="bento-item #{'bento-large' if img['is_large'] else ''}"
+                                    <div t-attf-class="bento-item #{'bento-large' if img.get('is_large') else ''} #{'is-block' if img['type'] == 'block' else ''}"
                                          t-att-data-id="img['id']"
-                                         t-att-data-quant-id="img['quant_id']"
-                                         t-att-data-name="img['name']"
+                                         t-att-data-type="img['type']"
+                                         t-att-data-quant-id="img.get('quant_id')"
+                                         t-att-data-name="img.get('product_name', img.get('name'))"
                                          t-att-data-lot="img['lot_name']"
                                          t-att-data-dims="img['dimensions']"
                                          t-att-data-area="img['area']"
@@ -101,22 +100,38 @@
                                             <div class="img-container">
                                                 <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
                                                 
+                                                <!-- Badge de Bloque -->
+                                                <t t-if="img['type'] == 'block'">
+                                                    <span class="block-badge">
+                                                        <i class="fa fa-layer-group me-1"></i> <t t-esc="img['count']"/> placas
+                                                    </span>
+                                                </t>
+
                                                 <!-- Overlay acciones -->
                                                 <div class="card-actions">
-                                                    <button class="btn-expand" type="button">
-                                                        <i class="fa fa-expand"></i>
-                                                    </button>
+                                                    <t t-if="img['type'] == 'block'">
+                                                        <button class="btn-expand open-block-btn" type="button" title="Ver contenido del bloque">
+                                                            <i class="fa fa-folder-open"></i>
+                                                        </button>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <button class="btn-expand lightbox-trigger" type="button">
+                                                            <i class="fa fa-expand"></i>
+                                                        </button>
+                                                    </t>
                                                 </div>
                                             </div>
                                             
                                             <!-- Footer con Info -->
                                             <div class="card-footer">
                                                 <div class="info-text">
-                                                    <span class="product-name" t-esc="img['name']"/>
+                                                    <span class="product-name" t-esc="img.get('product_name', img.get('name'))"/>
                                                     <div class="meta">
-                                                        <span class="lot">Lote: <t t-esc="img['lot_name']"/></span>
-                                                        <span class="sep">•</span>
-                                                        <span class="dims" t-esc="img['dimensions']"/>
+                                                        <span class="lot"><t t-esc="img['lot_name']"/></span>
+                                                        <t t-if="img['type'] != 'block'">
+                                                            <span class="sep">•</span>
+                                                            <span class="dims" t-esc="img['dimensions']"/>
+                                                        </t>
                                                     </div>
                                                     <span class="area-badge"><t t-esc="img['area']"/> m²</span>
                                                 </div>
@@ -137,7 +152,7 @@
                 </div>
             </div>
 
-            <!-- COMPONENTS: LIGHTBOX & CART -->
+            <!-- COMPONENTS -->
             <div id="lightbox" class="lightbox">
                 <button class="close-lightbox" type="button">&#215;</button>
                 <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
@@ -170,8 +185,7 @@
             <div id="cart-overlay" class="cart-overlay"></div>
         </t>
     </template>
-
-    <!-- Templates de Error -->
+    
     <template id="gallery_not_found">
         <t t-call="galeria.gallery_layout_headless">
             <div class="error-page">
