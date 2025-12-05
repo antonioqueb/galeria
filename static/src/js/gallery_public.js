@@ -3,8 +3,9 @@
 class GalleryApp {
     constructor() {
         this.cart = [];
-        this.config = window.galleryRawData || {};
-        this.cartKey = 'stone_gallery_cart_' + (this.config.token || 'default');
+        // NO cargamos la config aquí porque window.galleryRawData podría no existir aún.
+        this.config = {}; 
+        this.cartKey = ''; // Se definirá en init
         this.currentView = 'main'; // 'main' or 'block'
         
         if (document.readyState === 'loading') {
@@ -15,7 +16,11 @@ class GalleryApp {
     }
 
     init() {
-        // Cargar carrito previo
+        // CORRECCIÓN: Cargamos los datos aquí, cuando el DOM (y el script del template) ya cargó.
+        this.config = window.galleryRawData || {};
+        this.cartKey = 'stone_gallery_cart_' + (this.config.token || 'default');
+
+        // Cargar carrito previo usando la cartKey correcta
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
             try {
@@ -100,6 +105,7 @@ class GalleryApp {
 
     openBlockView(blockId) {
         // Buscar en el JSON usando el ID sanitizado
+        // Ahora this.config SI tiene datos porque se cargó en init()
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
         
         if (!details || details.length === 0) {
