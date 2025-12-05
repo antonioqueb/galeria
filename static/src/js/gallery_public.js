@@ -40,15 +40,11 @@ class GalleryApp {
         
         // Usamos document body para asegurar que cubrimos todo
         document.body.addEventListener('click', (e) => {
-            // Log para ver QUÉ se está clickeando exactamente
-            // console.log("DEBUG: Click detectado en:", e.target);
-
             // 1. Botón Expandir Lightbox (.btn-expand)
             const expandBtn = e.target.closest('.btn-expand');
             if (expandBtn) {
-                console.log("DEBUG: Click en Expandir");
                 e.preventDefault();
-                e.stopPropagation(); // Detener propagación por si acaso
+                e.stopPropagation(); 
                 this.openLightbox(expandBtn);
                 return;
             }
@@ -56,7 +52,6 @@ class GalleryApp {
             // 2. Botón Agregar al Carrito (.btn-add-cart)
             const addBtn = e.target.closest('.btn-add-cart');
             if (addBtn) {
-                console.log("DEBUG: Click en Agregar al Carrito");
                 e.preventDefault();
                 e.stopPropagation();
                 this.addToCart(addBtn);
@@ -66,7 +61,6 @@ class GalleryApp {
             // 3. Botón Eliminar del Carrito (.btn-remove)
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
-                console.log("DEBUG: Click en Eliminar item");
                 e.preventDefault();
                 const id = removeBtn.dataset.id;
                 this.removeFromCart(id);
@@ -75,7 +69,6 @@ class GalleryApp {
 
             // 4. Toggle Carrito
             if (e.target.closest('#cart-toggle') || e.target.closest('.close-cart') || e.target.closest('#cart-overlay')) {
-                console.log("DEBUG: Click en Toggle Carrito");
                 e.preventDefault();
                 this.toggleCart();
                 return;
@@ -90,7 +83,6 @@ class GalleryApp {
 
             // 6. Confirmar Reserva
             if (e.target.closest('#btn-confirm')) {
-                console.log("DEBUG: Click en Confirmar");
                 e.preventDefault();
                 this.confirmReservation();
                 return;
@@ -99,16 +91,11 @@ class GalleryApp {
     }
 
     addToCart(btn) {
-        console.log("DEBUG: Ejecutando addToCart");
         if (!btn) return;
         const itemEl = btn.closest('.bento-item');
-        if (!itemEl) {
-            console.error("DEBUG ERROR: No se encontró el elemento .bento-item padre");
-            return;
-        }
+        if (!itemEl) return;
 
         const id = itemEl.dataset.id;
-        console.log("DEBUG: ID del item:", id);
 
         // Toggle: Si ya existe, lo quita
         const existingIndex = this.cart.findIndex(i => String(i.id) === String(id));
@@ -136,7 +123,6 @@ class GalleryApp {
     }
 
     removeFromCart(id) {
-        console.log("DEBUG: Removiendo ID", id);
         const strId = String(id);
         this.cart = this.cart.filter(item => String(item.id) !== strId);
         this.saveCart();
@@ -149,12 +135,25 @@ class GalleryApp {
     }
 
     updateButtonsState() {
+        // Actualizar contador del header
         const counter = document.getElementById('cart-count');
+        const cartToggleBtn = document.getElementById('cart-toggle');
+
         if (counter) {
             counter.innerText = this.cart.length;
             counter.style.display = this.cart.length > 0 ? 'inline-block' : 'none';
         }
 
+        // CAMBIO SOLICITADO: Cambiar color del botón del carrito si tiene items
+        if (cartToggleBtn) {
+            if (this.cart.length > 0) {
+                cartToggleBtn.classList.add('active-cart');
+            } else {
+                cartToggleBtn.classList.remove('active-cart');
+            }
+        }
+
+        // Actualizar botones de cada tarjeta
         document.querySelectorAll('.bento-item').forEach(el => {
             const btn = el.querySelector('.btn-add-cart');
             const id = el.dataset.id;
@@ -234,7 +233,6 @@ class GalleryApp {
     }
 
     openLightbox(btn) {
-        console.log("DEBUG: Abriendo Lightbox");
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
         
@@ -292,7 +290,6 @@ class GalleryApp {
                 throw new Error("Token no encontrado.");
             }
 
-            console.log("DEBUG: Enviando reserva al servidor...");
             const response = await fetch('/gallery/confirm_reservation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -308,7 +305,6 @@ class GalleryApp {
             });
 
             const result = await response.json();
-            console.log("DEBUG: Respuesta servidor", result);
             
             if (result.result && result.result.success) {
                 alert("✅ " + result.result.message + "\n\nReferencia: " + result.result.order_name);

@@ -27,9 +27,11 @@ $border-color: #2d2d2d;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        max-width: 1400px;
+        /* Permitir que el header use más ancho en pantallas grandes para alinearse con el grid */
+        width: 96%;
+        max-width: 2500px; 
         margin: 0 auto;
-        padding: 0 20px;
+        padding: 0 10px;
     }
 
     .brand {
@@ -43,15 +45,36 @@ $border-color: #2d2d2d;
     .header-actions {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 15px; /* Reducido un poco para móvil */
     }
 
     .client-info {
         text-align: right;
-        @include mobile { display: none; } /* Ocultar nombre en móvil si falta espacio */
+        /* CAMBIO: Se eliminó display:none para mostrar siempre */
         
-        .label { font-size: 0.7rem; text-transform: uppercase; color: $text-gray; display: block; }
-        .client-name { font-weight: 600; font-size: 0.9rem; color: #fff; }
+        .label { 
+            font-size: 0.7rem; 
+            text-transform: uppercase; 
+            color: $text-gray; 
+            display: block; 
+            /* En móvil ocultamos el 'Hola,' para ahorrar espacio, solo mostramos nombre */
+            @include mobile { display: none; }
+        }
+        
+        .client-name { 
+            font-weight: 600; 
+            font-size: 0.9rem; 
+            color: #fff;
+            
+            @include mobile {
+                font-size: 0.8rem;
+                max-width: 120px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: block;
+            }
+        }
     }
 
     .btn-cart {
@@ -72,6 +95,23 @@ $border-color: #2d2d2d;
             border-color: $text-white;
         }
 
+        /* CAMBIO: Estado Activo cuando hay productos */
+        &.active-cart {
+            background-color: $primary;
+            border-color: $primary;
+            color: #000; /* Texto oscuro para contraste con dorado */
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+            
+            &:hover {
+                background-color: lighten($primary, 10%);
+            }
+            
+            .badge {
+                background: #000;
+                color: $primary;
+            }
+        }
+
         .badge {
             background: $primary;
             color: #000;
@@ -86,9 +126,11 @@ $border-color: #2d2d2d;
 
 /* Container */
 .content-container {
-    max-width: 1400px;
+    /* CAMBIO: Grid Fluido para que llene la pantalla al hacer Zoom Out */
+    width: 96%;
+    max-width: 2500px; /* Aumentado drásticamente para pantallas ultra-wide o zoom out */
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 40px 10px; /* Reducido padding lateral */
 }
 
 /* Titles */
@@ -108,12 +150,14 @@ $border-color: #2d2d2d;
 /* Bento Grid */
 .bento-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    grid-auto-rows: 320px; /* Altura un poco mayor para caber info */
+    /* CAMBIO: minmax ajustado a 240px. El auto-fill funcionará mejor con el contenedor fluido */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-auto-rows: 320px;
     grid-auto-flow: dense;
     gap: 20px;
 
     @include mobile {
+        /* MANTENEMOS: 2 columnas fijas en móvil como se solicitó */
         grid-template-columns: repeat(2, 1fr);
         grid-auto-rows: 240px;
         gap: 10px;
@@ -131,7 +175,8 @@ $border-color: #2d2d2d;
     &:hover { transform: translateY(-4px); border-color: #555; }
     
     &.bento-large {
-        @media (min-width: 992px) {
+        /* Solo aplicar span en pantallas donde caben al menos 2 columnas */
+        @media (min-width: 600px) {
             grid-column: span 2;
             grid-row: span 2;
         }
@@ -168,6 +213,11 @@ $border-color: #2d2d2d;
     }
 
     &:hover .card-actions { opacity: 1; }
+    
+    /* En móvil, mostrar acciones siempre (difícil hacer hover) */
+    @include mobile {
+         .card-actions { opacity: 1; }
+    }
 
     .btn-expand {
         background: rgba(0,0,0,0.6);
@@ -195,6 +245,8 @@ $border-color: #2d2d2d;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        flex: 1; /* Ocupar espacio disponible */
+        margin-right: 5px;
         
         .product-name {
             font-weight: 600;
@@ -209,6 +261,9 @@ $border-color: #2d2d2d;
         .meta {
             font-size: 0.75rem;
             color: $text-gray;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             .sep { margin: 0 4px; }
         }
         
