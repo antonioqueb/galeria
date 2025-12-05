@@ -66,7 +66,7 @@ export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
         this.dialog = useService("dialog");
-        this.user = useService("user"); // ✅ Usamos el servicio de usuario para el contexto
+        this.user = useService("user"); // ✅ Usamos el servicio de usuario robusto
         
         this.state = useState({
             images: [],
@@ -97,24 +97,25 @@ export class GallerySelector extends Component {
 
     async loadImages() {
         try {
-            // ✅ CORRECCIÓN CRÍTICA: Obtener Company ID desde el servicio user
-            // user.context.allowed_company_ids es un array [current, allowed...]
+            // ✅ CORRECCIÓN: Obtener Company ID de forma segura desde el servicio 'user'
+            // El servicio 'user' expone 'context' que contiene 'allowed_company_ids'
             let currentCompanyId = null;
             
-            if (this.user.context && this.user.context.allowed_company_ids) {
+            // Verificación defensiva
+            if (this.user && this.user.context && this.user.context.allowed_company_ids) {
                 currentCompanyId = this.user.context.allowed_company_ids[0];
+            } else if (this.user && this.user.currentCompany) {
+                 // Fallback para algunas versiones
+                 currentCompanyId = this.user.currentCompany.id;
             }
 
             if (!currentCompanyId) {
-                console.error("No se pudo determinar la compañía activa del usuario.");
-                return;
+                console.warn("No se pudo determinar la compañía activa. Mostrando todas las imágenes.");
+                // No retornamos, dejamos que cargue todo por si acaso, o podrías hacer un return;
             }
 
             // Construcción del dominio
             const domain = [
-                // 1. Filtrar por compañía actual explícitamente
-                ['lot_id.quant_ids.company_id', '=', currentCompanyId],
-                
                 // 2. Ubicación Interna y Stock Físico
                 ['lot_id.quant_ids.location_id.usage', '=', 'internal'],
                 ['lot_id.quant_ids.quantity', '>', 0],
@@ -125,6 +126,11 @@ export class GallerySelector extends Component {
                 // 4. Sin Hold Manual activo
                 ['lot_id.quant_ids.x_tiene_hold', '=', false]
             ];
+
+            // 1. Filtrar por compañía actual SI LA TENEMOS
+            if (currentCompanyId) {
+                domain.unshift(['lot_id.quant_ids.company_id', '=', currentCompanyId]);
+            }
 
             if (this.state.search) {
                 domain.push(['lot_id.name', 'ilike', this.state.search]);
