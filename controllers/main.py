@@ -5,6 +5,7 @@ import re
 from odoo import http
 from odoo.http import request
 from collections import defaultdict
+from markupsafe import Markup # <--- IMPORTANTE: Importar Markup
 
 class GalleryController(http.Controller):
 
@@ -65,7 +66,7 @@ class GalleryController(http.Controller):
                 'url': f"/gallery/image/{token}/{image.id}",
                 'write_date': str(image.write_date),
                 'type': 'single',
-                'is_large': False # Estandarizamos tamaño
+                'is_large': False 
             }
             
             temp_storage[categ_name][block_name].append(item_data)
@@ -83,7 +84,7 @@ class GalleryController(http.Controller):
                     total_area = sum(i['area'] for i in items)
                     first_img = items[0] # Imagen de referencia
                     
-                    # Generar ID seguro (Sanitización crítica para evitar errores JS)
+                    # Generar ID seguro
                     safe_block_name = re.sub(r'[^a-zA-Z0-9]', '_', block_name)
                     block_id = f"BLK_{safe_block_name}_{first_img['id']}"
                     
@@ -103,7 +104,8 @@ class GalleryController(http.Controller):
                     
                     final_grouped[categ].append(block_item)
                     
-                    # Guardar detalle para el drill-down en JS (Usando copia de lista)
+                    # Guardar detalle para el drill-down en JS
+                    # Al crear una lista nueva list(items), rompemos la referencia y aseguramos los datos
                     blocks_data[block_id] = list(items)
                 
                 else:
@@ -114,14 +116,17 @@ class GalleryController(http.Controller):
         # Serializamos los datos
         js_gallery_data = {
             'initial_view': dict(final_grouped),
-            'blocks_details': blocks_data, # Aquí van los detalles indexados por ID seguro
+            'blocks_details': blocks_data, 
             'token': token
         }
 
+        # --- CORRECCIÓN CRÍTICA AQUÍ ---
+        # Usamos Markup para evitar que Odoo escape las comillas del JSON en el HTML
+        # Si no usas Markup, 'json_data' llega al HTML como &quot;...&quot; y rompe el script JS.
         values = {
             'share': share,
             'grouped_images': dict(final_grouped),
-            'json_data': json.dumps(js_gallery_data),
+            'json_data': Markup(json.dumps(js_gallery_data)), 
             'company': share.company_id,
             'token': token
         }
@@ -136,8 +141,6 @@ class GalleryController(http.Controller):
         if not share or share.is_expired:
             return request.not_found()
 
-        # Validación relajada para permitir ver imágenes dentro de bloques
-        # (Si el ID existe en la imagen, permitimos verlo)
         image = request.env['stock.lot.image'].sudo().browse(image_id)
         if not image.exists() or not image.image:
             return request.not_found()
