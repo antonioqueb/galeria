@@ -3,9 +3,8 @@
 class GalleryApp {
     constructor() {
         this.cart = [];
-        // NO cargamos la config aquí porque window.galleryRawData podría no existir aún.
         this.config = {}; 
-        this.cartKey = ''; // Se definirá en init
+        this.cartKey = ''; 
         this.currentView = 'main'; // 'main' or 'block'
         
         if (document.readyState === 'loading') {
@@ -16,11 +15,11 @@ class GalleryApp {
     }
 
     init() {
-        // CORRECCIÓN: Cargamos los datos aquí, cuando el DOM (y el script del template) ya cargó.
+        // Carga de configuración segura (Fix anterior)
         this.config = window.galleryRawData || {};
         this.cartKey = 'stone_gallery_cart_' + (this.config.token || 'default');
-
-        // Cargar carrito previo usando la cartKey correcta
+        
+        // Cargar carrito previo
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
             try {
@@ -43,7 +42,9 @@ class GalleryApp {
 
     bindEvents() {
         document.body.addEventListener('click', (e) => {
-            // 1. Botón Abrir Bloque (Carpeta o Click en imagen de bloque)
+            // --- 1. ACCIONES PRIORITARIAS (Botones específicos) ---
+
+            // A. Botón "Abrir Bloque" (Icono Carpeta)
             const openBlockBtn = e.target.closest('.open-block-btn');
             if (openBlockBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -52,7 +53,7 @@ class GalleryApp {
                 return;
             }
 
-            // 2. Lightbox (Solo para imágenes simples)
+            // B. Botón "Lightbox" (Icono Expandir)
             const lightboxBtn = e.target.closest('.lightbox-trigger');
             if (lightboxBtn) {
                 e.preventDefault(); e.stopPropagation(); 
@@ -60,7 +61,7 @@ class GalleryApp {
                 return;
             }
 
-            // 3. Agregar al Carrito
+            // C. Botón "Agregar al Carrito"
             const addBtn = e.target.closest('.btn-add-cart');
             if (addBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -68,33 +69,62 @@ class GalleryApp {
                 return;
             }
 
-            // 4. Volver a galería principal
+            // --- 2. ACCIÓN INTUITIVA: CLIC EN LA FOTO ---
+            // Si el usuario da click a la imagen (contenedor) y NO a un botón
+            const imgContainer = e.target.closest('.img-container');
+            // Verificamos que no haya dado click a un botón dentro de la imagen (ej. el de expandir)
+            const isButtonInside = e.target.closest('button');
+
+            if (imgContainer && !isButtonInside) {
+                e.preventDefault(); e.stopPropagation();
+                
+                const itemEl = imgContainer.closest('.bento-item');
+                if (itemEl) {
+                    const type = itemEl.dataset.type;
+                    
+                    if (type === 'block') {
+                        // SI ES BLOQUE: Entramos al nivel detalle
+                        this.openBlockView(itemEl.dataset.id);
+                    } else {
+                        // SI ES SINGLE: Abrimos el zoom (Lightbox)
+                        // Pasamos el contenedor como referencia, la función openLightbox lo maneja bien
+                        this.openLightbox(imgContainer);
+                    }
+                }
+                return;
+            }
+
+            // --- 3. NAVEGACIÓN Y UI ---
+
+            // Volver a galería principal
             if (e.target.closest('#btn-back-gallery')) {
                 e.preventDefault();
                 this.restoreMainView();
                 return;
             }
 
-            // 5. Carrito UI
+            // Eliminar del carrito
             if (e.target.closest('.btn-remove')) {
                 e.preventDefault();
                 this.removeFromCart(e.target.closest('.btn-remove').dataset.id);
                 return;
             }
+
+            // Abrir/Cerrar Carrito Lateral
             if (e.target.closest('#cart-toggle') || e.target.closest('.close-cart') || e.target.closest('#cart-overlay')) {
                 e.preventDefault();
                 this.toggleCart();
                 return;
             }
 
-            // 6. Checkout
+            // Confirmar Reserva
             if (e.target.closest('#btn-confirm')) {
                 e.preventDefault();
                 this.confirmReservation();
                 return;
             }
 
-            // 7. Close Lightbox
+            // Cerrar Lightbox
             if (e.target.closest('.close-lightbox')) {
                 this.closeLightbox();
             }
@@ -105,12 +135,11 @@ class GalleryApp {
 
     openBlockView(blockId) {
         // Buscar en el JSON usando el ID sanitizado
-        // Ahora this.config SI tiene datos porque se cargó en init()
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
         
         if (!details || details.length === 0) {
-            console.error("No details found for block:", blockId, "Available Keys:", Object.keys(this.config.blocks_details || {}));
-            alert("No se pudieron cargar los detalles del bloque. ID: " + blockId);
+            console.error("No details found for block:", blockId);
+            // Fallback silencioso o alerta amigable si prefieres
             return;
         }
 
@@ -157,7 +186,8 @@ class GalleryApp {
     }
 
     renderCardHtml(img) {
-        // Renderiza tarjeta simple (is_large siempre false aquí)
+        // Renderiza tarjeta simple
+        // NOTA: Se mantiene la estructura para que los eventos funcionen igual en la vista detallada
         return `
             <div class="bento-item"
                  data-id="${img.id}"
@@ -170,7 +200,7 @@ class GalleryApp {
                  data-url="${img.url}">
                 
                 <div class="bento-card">
-                    <div class="img-container">
+                    <div class="img-container" style="cursor: pointer;"> <!-- UX: Cursor pointer añadido -->
                         <img src="${img.url}" loading="lazy" alt="${img.lot_name}"/>
                         <div class="card-actions">
                             <button class="btn-expand lightbox-trigger" type="button">
@@ -211,7 +241,6 @@ class GalleryApp {
             const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
             
             if (!details || details.length === 0) {
-                console.warn("No children found for cart add on block:", id);
                 return;
             }
 
@@ -225,7 +254,6 @@ class GalleryApp {
             } else {
                 details.forEach(child => {
                     if (!this.cart.find(c => String(c.id) === String(child.id))) {
-                        // Construir objeto producto
                         this.pushToCart({
                             id: child.id,
                             quant_id: child.quant_id,
@@ -304,7 +332,6 @@ class GalleryApp {
             let isSelected = false;
 
             if (type === 'block') {
-                // Lógica visual para bloque: ¿Están todos sus hijos en el carrito?
                 const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
                 if (details.length > 0) {
                     const allIds = details.map(d => String(d.id));
@@ -325,7 +352,6 @@ class GalleryApp {
         });
     }
 
-    // ... Resto de métodos UI (Lightbox, CartUI, Confirm) ...
     updateCartUI() {
         const container = document.getElementById('cart-items-container');
         if (!container) return;
@@ -370,6 +396,7 @@ class GalleryApp {
         }
     }
     openLightbox(btn) {
+        // Puede recibir un botón o el contenedor de imagen directo
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
         const imgUrl = itemEl.dataset.url;
