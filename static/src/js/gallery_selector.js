@@ -57,24 +57,27 @@ export class GallerySelector extends Component {
         this.scrollRef = useRef("scrollContainer");
         
         this.state = useState({
-            allItems: [],       // Elementos procesados (Bloques o Placas sueltas)
-            visibleItems: [],   // Paginación visual
+            allItems: [],       
+            visibleItems: [],   
             pageSize: 40,
             currentPage: 1,
             
             categories: [],
             
             selectedCategory: "",
-            filterProduct: "",  // Texto libre para producto
-            filterBlock: "",    // Input del sidebar (filtro parcial)
+            filterProduct: "",  
+            filterBlock: "",    
             filterBundle: "",
-            search: "",         // Lote/Serie
+            search: "",         
             
-            activeBlock: null,  // SI NO ES NULL, ESTAMOS VIENDO EL CONTENIDO DE UN BLOQUE
+            activeBlock: null,  
             
-            selectedIds: new Set(), // IDs de stock.lot.image seleccionados
+            selectedIds: new Set(), 
             currentCompanyId: null,
-            loading: false
+            loading: false,
+            
+            // NUEVO: Estado para controlar el sidebar en móvil
+            mobileFiltersOpen: false 
         });
 
         this.debouncedLoad = useDebounced(() => this.loadImages(), 500);
@@ -87,6 +90,11 @@ export class GallerySelector extends Component {
             await this.loadCategories();
             await this.loadImages();
         });
+    }
+
+    // --- NUEVO: Toggle para filtros móvil ---
+    toggleFilters() {
+        this.state.mobileFiltersOpen = !this.state.mobileFiltersOpen;
     }
 
     async loadCategories() {
@@ -104,7 +112,6 @@ export class GallerySelector extends Component {
         this.state.currentPage = 1; 
         
         try {
-            // 1. Construir dominio BASE
             const quantDomain = [
                 ['location_id.usage', '=', 'internal'],
                 ['quantity', '>', 0],
@@ -116,33 +123,23 @@ export class GallerySelector extends Component {
                 quantDomain.unshift(['company_id', '=', this.state.currentCompanyId]);
             }
 
-            // --- MODO 1: VIENDO UN BLOQUE ESPECÍFICO (Drill-down) ---
             if (this.state.activeBlock) {
-                // Filtramos SOLO por ese bloque exacto
                 quantDomain.push(['lot_id.x_bloque', '=', this.state.activeBlock]);
-                // Ignoramos filtros de sidebar temporalmente para ver todo el bloque,
-                // excepto quizás el filtro de búsqueda de lote específico si el usuario quiere buscar DENTRO del bloque.
                 if (this.state.search) quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
             } 
-            // --- MODO 2: NAVEGACIÓN GENERAL ---
             else {
                 if (this.state.search) quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
                 if (this.state.filterBlock) quantDomain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
                 if (this.state.filterBundle) quantDomain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
                 if (this.state.selectedCategory) quantDomain.push(['product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
                 
-                // Filtro de Producto (Texto libre) - Corrección: trim() para evitar espacios
                 if (this.state.filterProduct && this.state.filterProduct.trim() !== "") {
                     quantDomain.push(['product_id.name', 'ilike', this.state.filterProduct.trim()]);
                 }
             }
 
-            // 2. Buscar Quants y obtener IDs de Lotes
             const validQuants = await this.orm.searchRead(
-                "stock.quant", 
-                quantDomain, 
-                ["lot_id"], 
-                { limit: 2000 }
+                "stock.quant", quantDomain, ["lot_id"], { limit: 2000 }
             );
 
             const validLotIds = validQuants.map(q => q.lot_id[0]);
@@ -154,11 +151,8 @@ export class GallerySelector extends Component {
                 return;
             }
 
-            // 3. Metadata de Lotes
             const lotsData = await this.orm.read(
-                "stock.lot",
-                validLotIds,
-                ["id", "name", "x_bloque", "x_alto", "x_ancho", "product_id"]
+                "stock.lot", validLotIds, ["id", "name", "x_bloque", "x_alto", "x_ancho", "product_id"]
             );
             
             const lotMap = {};
@@ -172,19 +166,13 @@ export class GallerySelector extends Component {
                 };
             });
 
-            // 4. Buscar Imágenes
             const images = await this.orm.searchRead(
-                "stock.lot.image", 
-                [['lot_id', 'in', validLotIds]], 
-                ["id", "name", "lot_id", "write_date"], 
-                { order: "id desc" }
+                "stock.lot.image", [['lot_id', 'in', validLotIds]], 
+                ["id", "name", "lot_id", "write_date"], { order: "id desc" }
             );
 
-            // 5. Agrupar (SOLO SI NO ESTAMOS DENTRO DE UN BLOQUE ACTIVO)
             const grouped = {};
             const singleItems = [];
-
-            // Si activeBlock tiene valor, forzamos que todo sea 'single'
             const forceSingles = !!this.state.activeBlock;
 
             images.forEach(img => {
@@ -192,11 +180,11 @@ export class GallerySelector extends Component {
                 if (!lData) return;
 
                 const imgObj = {
-                    type: 'single', // Base type
+                    type: 'single',
                     key: img.id,
                     id: img.id, 
                     lot_name: lData.name,
-                    name: lData.name, // Para display
+                    name: lData.name, 
                     dims: `${lData.h.toFixed(2)} x ${lData.w.toFixed(2)}`,
                     area: (lData.h * lData.w),
                     unique: img.write_date,
@@ -205,9 +193,7 @@ export class GallerySelector extends Component {
                     cover_unique: img.write_date
                 };
 
-                // LÓGICA DE AGRUPACIÓN
                 if (lData.block && !forceSingles) {
-                    // Estamos en vista general y tiene bloque -> Agrupar
                     if (!grouped[lData.block]) {
                         grouped[lData.block] = {
                             type: 'block',
@@ -225,16 +211,12 @@ export class GallerySelector extends Component {
                     grouped[lData.block].items.push(imgObj);
                     grouped[lData.block].total_area += imgObj.area;
                 } else {
-                    // Es placa suelta O estamos "dentro" del bloque viendo detalle
                     singleItems.push(imgObj);
                 }
             });
 
             const blocks = Object.values(grouped);
-            
-            // Si estamos dentro de un bloque, singleItems tendrá todas las fotos de ese bloque
             this.state.allItems = [...blocks, ...singleItems];
-            
             this.loadMoreImages();
 
         } catch (e) {
@@ -261,31 +243,23 @@ export class GallerySelector extends Component {
     }
 
     // --- Eventos UI ---
-
     async onCategoryChange(ev) {
         this.state.selectedCategory = ev.target.value;
-        // Limpiamos filtros específicos al cambiar categoría para evitar confusión
         this.state.filterProduct = "";
         this.state.activeBlock = null; 
         await this.loadImages();
     }
 
     onInputSearch(ev, field) {
-        // Actualizamos el estado inmediatamente
         this.state[field] = ev.target.value;
-        
-        // Si borra el producto, aseguramos que activeBlock se limpie si es necesario (opcional)
-        // Pero lo importante es lanzar la recarga
         this.debouncedLoad();
     }
 
-    // Acción para "Entrar" en un bloque
     openBlock(blockName) {
         this.state.activeBlock = blockName;
         this.loadImages();
     }
 
-    // Acción para "Volver" al listado general
     backToGallery() {
         this.state.activeBlock = null;
         this.loadImages();

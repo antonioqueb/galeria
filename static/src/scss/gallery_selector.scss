@@ -1,28 +1,78 @@
+/* static/src/scss/gallery_selector.scss */
+
 .o_gallery_app {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     height: 100%;
-    
-    // --- Layout Principal ---
+    overflow: hidden; /* Importante para que el scroll lo maneje el contenedor interno */
+
+    // --- SIDEBAR (Filtros) ---
     .o_gallery_sidebar {
         width: 280px;
         min-width: 280px;
         max-width: 280px;
-        z-index: 2;
+        z-index: 1000;
         overflow-y: auto;
         height: 100%;
+        background: #fff;
+        border-right: 1px solid #dee2e6;
+        transition: transform 0.3s ease-in-out;
+
+        /* Mobile Behavior: Off-canvas */
+        @media (max-width: 768px) {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 85%;
+            max-width: 320px;
+            transform: translateX(-100%); /* Oculto por defecto */
+            box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+
+            &.mobile-open {
+                transform: translateX(0); /* Visible */
+            }
+        }
+    }
+
+    // --- Backdrop para móvil ---
+    .o_gallery_sidebar_backdrop {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+        display: none;
+        
+        &.active {
+            display: block;
+        }
     }
     
+    // --- MAIN AREA ---
     .o_gallery_main {
         height: 100%;
         overflow: hidden;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    // --- Topbar Responsive ---
+    .o_gallery_topbar {
+        @media (max-width: 768px) {
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px !important;
+            
+            .btn-primary {
+                width: 100%; /* Botón "Generar Link" full width en móvil */
+                margin-top: 5px;
+            }
+        }
     }
 
     // --- Utilidades ---
-    .bg-200 {
-        background-color: #e9ecef !important;
-    }
-
-    // Clase para el botón pequeño "Abrir"
+    .bg-200 { background-color: #e9ecef !important; }
+    
     .btn-xs {
         padding: 1px 6px;
         font-size: 11px;
@@ -37,96 +87,59 @@
         border: 1px solid rgba(0,0,0,0.08) !important;
         background: #fff;
         overflow: hidden;
-        position: relative; // Necesario para el contexto de apilamiento
+        position: relative; 
 
-        // Efecto Hover
         &:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
             border-color: rgba(0,0,0,0.15) !important;
             
-            .transition-zoom {
-                transform: scale(1.05);
-            }
-            
-            .o_card_overlay {
-                opacity: 1;
-                background-color: rgba(0,0,0,0.02);
-            }
+            .transition-zoom { transform: scale(1.05); }
+            .o_card_overlay { opacity: 1; background-color: rgba(0,0,0,0.02); }
         }
 
-        // Estado Seleccionado
         &.selected {
             border: 2px solid #0d6efd !important;
-            
             .o_card_overlay {
                 opacity: 1;
-                background-color: rgba(13, 110, 253, 0.15); // Un poco más sutil
+                background-color: rgba(13, 110, 253, 0.15); 
             }
         }
 
-        // Imagen y Zoom
         .card-img-top {
             position: relative;
-            
-            .transition-zoom {
-                transition: transform 0.4s ease;
-            }
-            
-            // Badge de Bloque (ajuste fino)
+            .transition-zoom { transition: transform 0.4s ease; }
             .badge {
                 font-weight: 500;
-                letter-spacing: 0.5px;
                 backdrop-filter: blur(2px);
                 opacity: 0.9;
             }
         }
 
-        // Cuerpo de la tarjeta
         .card-body {
-            font-size: 13px; // Tamaño base ajustado
-            
-            .fw-bold {
-                font-weight: 600 !important;
-            }
-            
-            // Ajuste del botón para que no choque con textos largos
+            font-size: 13px; 
+            .fw-bold { font-weight: 600 !important; }
             .btn-outline-primary {
                 white-space: nowrap;
-                &:hover {
-                    color: #fff;
-                    background-color: #0d6efd;
-                }
+                &:hover { color: #fff; background-color: #0d6efd; }
             }
         }
 
-        // Overlay de Selección (Checkbox)
         .o_card_overlay {
             opacity: 0;
             transition: opacity 0.2s, background-color 0.2s;
             z-index: 10;
-            cursor: pointer; // Asegurar que se note que es clickeable
+            cursor: pointer; 
             
             .form-check-input {
                 cursor: pointer;
-                width: 1.4em;
-                height: 1.4em;
+                width: 1.4em; height: 1.4em;
                 border: 2px solid rgba(0,0,0,0.25);
-                
-                &:checked {
-                    background-color: #0d6efd;
-                    border-color: #0d6efd;
-                }
+                &:checked { background-color: #0d6efd; border-color: #0d6efd; }
             }
-            
-            &.active {
-                opacity: 1;
-            }
+            &.active { opacity: 1; }
         }
     }
 
-    // Utilidad extra
-    .scale-150 {
-        transform: scale(1.5);
-    }
+    .scale-150 { transform: scale(1.5); }
 }
