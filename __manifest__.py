@@ -13,7 +13,7 @@
         - Carrito de compras público (Sidecar) y reservas automáticas.
     """,
     'author': 'Alphaqueb Consulting',
-    'depends': ['base', 'web', 'stock', 'stock_lot_dimensions', 'website', 'inventory_shopping_cart'],
+    'depends': ['base', 'web', 'stock', 'stock_lot_dimensions', 'inventory_shopping_cart'],
     'data': [
         'security/ir.model.access.csv',
         'data/gallery_sequence.xml',
