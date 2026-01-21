@@ -6,26 +6,62 @@ import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
 import { useDebounced } from "@web/core/utils/timing";
 
-// --- Componente Modal (Sin cambios) ---
+// --- Componente Modal (MODIFICADO PARA BÚSQUEDA) ---
 class CreateLinkDialog extends Component {
     setup() {
         this.orm = useService("orm");
         this.notification = useService("notification");
         this.action = useService("action");
-        this.state = useState({ partner_id: false, partners: [] });
-
-        onWillStart(async () => {
-            try {
-                this.state.partners = await this.orm.searchRead(
-                    "res.partner", [], ["id", "name"], { limit: 80, order: "name asc" }
-                );
-            } catch (e) { console.error(e); }
+        
+        this.state = useState({ 
+            partner_id: false, 
+            query: "",          // Texto que escribe el usuario
+            suggestions: []     // Resultados de la búsqueda
         });
+
+        // Creamos una función de búsqueda con retraso (debounce) para no saturar al servidor
+        this.debouncedSearch = useDebounced(async (term) => {
+            if (!term || term.length < 2) {
+                this.state.suggestions = [];
+                return;
+            }
+            try {
+                // Buscamos clientes que coincidan con el nombre
+                const results = await this.orm.searchRead(
+                    "res.partner", 
+                    [['name', 'ilike', term]], 
+                    ["id", "name", "email"], 
+                    { limit: 10 }
+                );
+                this.state.suggestions = results;
+            } catch (e) {
+                console.error(e);
+            }
+        }, 300); // Espera 300ms después de dejar de escribir
+    }
+
+    onInputSearch(ev) {
+        const term = ev.target.value;
+        this.state.query = term;
+        
+        // Si borran el texto, limpiamos la selección previa
+        if (term === "") {
+            this.state.partner_id = false;
+            this.state.suggestions = [];
+        } else {
+            this.debouncedSearch(term);
+        }
+    }
+
+    selectPartner(partner) {
+        this.state.partner_id = partner.id;
+        this.state.query = partner.name; // Ponemos el nombre en el input
+        this.state.suggestions = [];     // Ocultamos la lista
     }
 
     async confirm() {
         if (!this.state.partner_id) {
-            this.notification.add("Debes seleccionar un contacto", { type: "danger" });
+            this.notification.add("Debes buscar y seleccionar un contacto válido", { type: "danger" });
             return;
         }
         try {
@@ -46,10 +82,67 @@ class CreateLinkDialog extends Component {
         }
     }
 }
-CreateLinkDialog.template = "galeria.CreateLinkDialog";
+
+// Actualizamos el template XML incrustado
+CreateLinkDialog.template = `
+    <t t-name="galeria.CreateLinkDialog" owl="1">
+        <Dialog title="props.title">
+            <div class="p-4">
+                <div class="mb-4 text-center">
+                    <div class="bg-light rounded-circle d-inline-flex p-3 mb-2 text-primary">
+                        <i class="fa fa-share-alt fa-2x"/>
+                    </div>
+                    <h5>Compartir <strong class="text-primary"><t t-esc="props.selectedImages.length"/></strong> imágenes</h5>
+                </div>
+
+                <div class="mb-3 position-relative">
+                    <label class="form-label fw-bold">Buscar Cliente</label>
+                    
+                    <!-- INPUT DE BÚSQUEDA -->
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa fa-search"/></span>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               placeholder="Escribe nombre del cliente..." 
+                               t-att-value="state.query"
+                               t-on-input="onInputSearch"
+                               autocomplete="off"/>
+                    </div>
+
+                    <!-- LISTA DESPLEGABLE DE RESULTADOS -->
+                    <div t-if="state.suggestions.length > 0" 
+                         class="list-group position-absolute w-100 shadow-lg" 
+                         style="z-index: 1000; max-height: 200px; overflow-y: auto;">
+                        
+                        <t t-foreach="state.suggestions" t-as="p" t-key="p.id">
+                            <button type="button" 
+                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                                    t-on-click="() => this.selectPartner(p)">
+                                <div>
+                                    <div class="fw-bold"><t t-esc="p.name"/></div>
+                                    <small t-if="p.email" class="text-muted"><t t-esc="p.email"/></small>
+                                </div>
+                                <i class="fa fa-check text-primary" t-if="state.partner_id === p.id"/>
+                            </button>
+                        </t>
+                    </div>
+                </div>
+                
+                <div t-if="state.partner_id" class="alert alert-success py-2 d-flex align-items-center">
+                    <i class="fa fa-check-circle me-2"/> Cliente seleccionado
+                </div>
+
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-light" t-on-click="props.close">Cancelar</button>
+                <button class="btn btn-primary px-4" t-on-click="confirm" t-att-disabled="!state.partner_id">Generar Link</button>
+            </t>
+        </Dialog>
+    </t>
+`;
 CreateLinkDialog.components = { Dialog };
 
-// --- Componente Principal ---
+// --- Componente Principal (Sin cambios funcionales, solo se mantiene el código original) ---
 export class GallerySelector extends Component {
     setup() {
         this.orm = useService("orm");
@@ -76,7 +169,6 @@ export class GallerySelector extends Component {
             currentCompanyId: null,
             loading: false,
             
-            // NUEVO: Estado para controlar el sidebar en móvil
             mobileFiltersOpen: false 
         });
 
@@ -92,7 +184,6 @@ export class GallerySelector extends Component {
         });
     }
 
-    // --- NUEVO: Toggle para filtros móvil ---
     toggleFilters() {
         this.state.mobileFiltersOpen = !this.state.mobileFiltersOpen;
     }
