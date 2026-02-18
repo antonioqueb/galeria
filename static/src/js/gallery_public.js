@@ -15,11 +15,9 @@ class GalleryApp {
     }
 
     init() {
-        // Carga de configuración segura (Fix anterior)
         this.config = window.galleryRawData || {};
         this.cartKey = 'stone_gallery_cart_' + (this.config.token || 'default');
         
-        // Cargar carrito previo
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
             try {
@@ -29,7 +27,6 @@ class GalleryApp {
             }
         }
         
-        // Guardar el HTML inicial del grid para restaurarlo rápido al volver
         const container = document.getElementById('main-gallery-container');
         if (container) {
             this.mainGridHTML = container.innerHTML;
@@ -42,9 +39,7 @@ class GalleryApp {
 
     bindEvents() {
         document.body.addEventListener('click', (e) => {
-            // --- 1. ACCIONES PRIORITARIAS (Botones específicos) ---
-
-            // A. Botón "Abrir Bloque" (Icono Carpeta)
+            // A. Botón "Abrir Bloque"
             const openBlockBtn = e.target.closest('.open-block-btn');
             if (openBlockBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -53,7 +48,7 @@ class GalleryApp {
                 return;
             }
 
-            // B. Botón "Lightbox" (Icono Expandir)
+            // B. Botón Lightbox
             const lightboxBtn = e.target.closest('.lightbox-trigger');
             if (lightboxBtn) {
                 e.preventDefault(); e.stopPropagation(); 
@@ -61,7 +56,7 @@ class GalleryApp {
                 return;
             }
 
-            // C. Botón "Agregar al Carrito"
+            // C. Botón Apartar
             const addBtn = e.target.closest('.btn-add-cart');
             if (addBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -69,10 +64,8 @@ class GalleryApp {
                 return;
             }
 
-            // --- 2. ACCIÓN INTUITIVA: CLIC EN LA FOTO ---
-            // Si el usuario da click a la imagen (contenedor) y NO a un botón
+            // Clic en foto
             const imgContainer = e.target.closest('.img-container');
-            // Verificamos que no haya dado click a un botón dentro de la imagen (ej. el de expandir)
             const isButtonInside = e.target.closest('button');
 
             if (imgContainer && !isButtonInside) {
@@ -81,71 +74,57 @@ class GalleryApp {
                 const itemEl = imgContainer.closest('.bento-item');
                 if (itemEl) {
                     const type = itemEl.dataset.type;
-                    
                     if (type === 'block') {
-                        // SI ES BLOQUE: Entramos al nivel detalle
                         this.openBlockView(itemEl.dataset.id);
                     } else {
-                        // SI ES SINGLE: Abrimos el zoom (Lightbox)
-                        // Pasamos el contenedor como referencia, la función openLightbox lo maneja bien
                         this.openLightbox(imgContainer);
                     }
                 }
                 return;
             }
 
-            // --- 3. NAVEGACIÓN Y UI ---
-
-            // Volver a galería principal
             if (e.target.closest('#btn-back-gallery')) {
                 e.preventDefault();
                 this.restoreMainView();
                 return;
             }
 
-            // Eliminar del carrito
             if (e.target.closest('.btn-remove')) {
                 e.preventDefault();
                 this.removeFromCart(e.target.closest('.btn-remove').dataset.id);
                 return;
             }
 
-            // Abrir/Cerrar Carrito Lateral
             if (e.target.closest('#cart-toggle') || e.target.closest('.close-cart') || e.target.closest('#cart-overlay')) {
                 e.preventDefault();
                 this.toggleCart();
                 return;
             }
 
-            // Confirmar Reserva
             if (e.target.closest('#btn-confirm')) {
                 e.preventDefault();
                 this.confirmReservation();
                 return;
             }
 
-            // Cerrar Lightbox
             if (e.target.closest('.close-lightbox')) {
                 this.closeLightbox();
             }
         });
     }
 
-    // --- Lógica de Vistas (Bloque vs Main) ---
+    // --- Vistas ---
 
     openBlockView(blockId) {
-        // Buscar en el JSON usando el ID sanitizado
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
         
         if (!details || details.length === 0) {
             console.error("No details found for block:", blockId);
-            // Fallback silencioso o alerta amigable si prefieres
             return;
         }
 
         const container = document.getElementById('main-gallery-container');
         
-        // Generar HTML para los items internos
         let html = `
             <div class="category-block">
                 <h2 class="category-title text-primary">
@@ -164,7 +143,6 @@ class GalleryApp {
         container.innerHTML = html;
         container.scrollIntoView({ behavior: 'smooth' });
 
-        // Mostrar botón volver
         const backBtn = document.getElementById('btn-back-gallery');
         if (backBtn) backBtn.style.display = 'flex';
 
@@ -186,8 +164,6 @@ class GalleryApp {
     }
 
     renderCardHtml(img) {
-        // Renderiza tarjeta simple
-        // NOTA: Se mantiene la estructura para que los eventos funcionen igual en la vista detallada
         return `
             <div class="bento-item"
                  data-id="${img.id}"
@@ -200,7 +176,7 @@ class GalleryApp {
                  data-url="${img.url}">
                 
                 <div class="bento-card">
-                    <div class="img-container" style="cursor: pointer;"> <!-- UX: Cursor pointer añadido -->
+                    <div class="img-container" style="cursor: pointer;">
                         <img src="${img.url}" loading="lazy" alt="${img.lot_name}"/>
                         <div class="card-actions">
                             <button class="btn-expand lightbox-trigger" type="button">
@@ -219,7 +195,7 @@ class GalleryApp {
                             <span class="area-badge">${img.area.toFixed(2)} m²</span>
                         </div>
                         <button class="btn-add-cart" type="button">
-                            <i class="fa fa-plus"></i>
+                            Apartar
                         </button>
                     </div>
                 </div>
@@ -227,7 +203,7 @@ class GalleryApp {
         `;
     }
 
-    // --- Lógica del Carrito ---
+    // --- Carrito ---
 
     handleAddToCartClick(btn) {
         const itemEl = btn.closest('.bento-item');
@@ -236,19 +212,13 @@ class GalleryApp {
         const type = itemEl.dataset.type;
         const id = itemEl.dataset.id;
 
-        // Si es un BLOQUE -> Agregamos todos sus hijos
         if (type === 'block') {
             const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
-            
-            if (!details || details.length === 0) {
-                return;
-            }
+            if (!details || details.length === 0) return;
 
-            // Verificar cuántos hijos ya están en el carrito
             const allIds = details.map(d => String(d.id));
             const inCartCount = this.cart.filter(c => allIds.includes(String(c.id))).length;
             
-            // Lógica Toggle: Si todos están, los quita. Si falta alguno, los agrega.
             if (inCartCount === details.length) {
                 allIds.forEach(childId => this.removeFromCart(childId, false));
             } else {
@@ -269,12 +239,11 @@ class GalleryApp {
             this.saveCart();
 
         } else {
-            // Es item simple
             const existingIndex = this.cart.findIndex(i => String(i.id) === String(id));
             if (existingIndex > -1) {
                 this.removeFromCart(id);
             } else {
-                const product = {
+                this.pushToCart({
                     id: id,
                     quant_id: itemEl.dataset.quantId,
                     name: itemEl.dataset.name,
@@ -282,8 +251,7 @@ class GalleryApp {
                     dims: itemEl.dataset.dims,
                     area: parseFloat(itemEl.dataset.area || 0),
                     url: itemEl.dataset.url
-                };
-                this.pushToCart(product);
+                });
                 this.saveCart();
             }
         }
@@ -311,7 +279,6 @@ class GalleryApp {
     }
 
     updateButtonsState() {
-        // Actualizar contador header
         const counter = document.getElementById('cart-count');
         const cartToggleBtn = document.getElementById('cart-toggle');
         if (counter) {
@@ -322,13 +289,12 @@ class GalleryApp {
             this.cart.length > 0 ? cartToggleBtn.classList.add('active-cart') : cartToggleBtn.classList.remove('active-cart');
         }
 
-        // Actualizar botones del grid
         document.querySelectorAll('.bento-item').forEach(el => {
             const btn = el.querySelector('.btn-add-cart');
-            const icon = btn.querySelector('i');
+            if (!btn) return;
+
             const type = el.dataset.type;
             const id = el.dataset.id;
-
             let isSelected = false;
 
             if (type === 'block') {
@@ -344,10 +310,10 @@ class GalleryApp {
 
             if (isSelected) {
                 btn.classList.add('in-cart');
-                if (icon) { icon.classList.remove('fa-plus'); icon.classList.add('fa-check'); }
+                btn.innerHTML = '<i class="fa fa-check me-1"></i> Apartado';
             } else {
                 btn.classList.remove('in-cart');
-                if (icon) { icon.classList.remove('fa-check'); icon.classList.add('fa-plus'); }
+                btn.innerHTML = 'Apartar';
             }
         });
     }
@@ -357,6 +323,7 @@ class GalleryApp {
         if (!container) return;
         container.innerHTML = '';
         let totalArea = 0;
+
         if (this.cart.length === 0) {
             container.innerHTML = `<div style="text-align: center; color: #666; padding: 40px 20px;"><i class="fa fa-shopping-basket fa-3x mb-3" style="opacity: 0.3;"></i><p>Tu selección está vacía.</p></div>`;
         } else {
@@ -376,10 +343,12 @@ class GalleryApp {
                 container.appendChild(div);
             });
         }
+
         const totalPlatesEl = document.getElementById('total-plates');
         const totalAreaEl = document.getElementById('total-area');
         if (totalPlatesEl) totalPlatesEl.innerText = this.cart.length;
         if (totalAreaEl) totalAreaEl.innerText = totalArea.toFixed(2) + " m²";
+
         const confirmBtn = document.getElementById('btn-confirm');
         if (confirmBtn) {
             confirmBtn.disabled = this.cart.length === 0;
@@ -387,6 +356,7 @@ class GalleryApp {
             confirmBtn.style.cursor = this.cart.length === 0 ? 'not-allowed' : 'pointer';
         }
     }
+
     toggleCart() {
         const sidebar = document.getElementById('cart-sidebar');
         const overlay = document.getElementById('cart-overlay');
@@ -395,8 +365,8 @@ class GalleryApp {
             overlay.classList.toggle('open');
         }
     }
+
     openLightbox(btn) {
-        // Puede recibir un botón o el contenedor de imagen directo
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
         const imgUrl = itemEl.dataset.url;
@@ -409,6 +379,7 @@ class GalleryApp {
             document.body.style.overflow = 'hidden';
         }
     }
+
     closeLightbox() {
         const lightbox = document.getElementById('lightbox');
         if (lightbox) {
@@ -417,6 +388,7 @@ class GalleryApp {
             this.resetZoom();
         }
     }
+
     resetZoom() {
         const img = document.getElementById('lightbox-img');
         if (img) {
@@ -424,6 +396,7 @@ class GalleryApp {
             setTimeout(() => { img.style.transformOrigin = "center center"; }, 300);
         }
     }
+
     zoomImage(e) {
         const img = document.getElementById('lightbox-img');
         if (!img) return;
@@ -433,6 +406,7 @@ class GalleryApp {
         img.style.transformOrigin = `${x}% ${y}%`;
         img.style.transform = "scale(2.5)";
     }
+
     async confirmReservation() {
         if (this.cart.length === 0) return;
         const btn = document.getElementById('btn-confirm');
@@ -442,19 +416,32 @@ class GalleryApp {
         try {
             if (!this.config.token) throw new Error("Token no encontrado.");
             const response = await fetch('/gallery/confirm_reservation', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: { token: this.config.token, items: this.cart }, id: Math.floor(Math.random() * 1000) })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: "2.0", method: "call",
+                    params: { token: this.config.token, items: this.cart },
+                    id: Math.floor(Math.random() * 1000)
+                })
             });
             const result = await response.json();
             if (result.result && result.result.success) {
                 alert("✅ " + result.result.message + "\n\nReferencia: " + result.result.order_name);
-                this.cart = []; this.saveCart(); this.updateCartUI(); this.toggleCart(); window.location.reload();
+                this.cart = [];
+                this.saveCart();
+                this.updateCartUI();
+                this.toggleCart();
+                window.location.reload();
             } else {
                 const msg = result.error ? result.error.data.message : (result.result ? result.result.message : "Error desconocido");
                 alert("⚠️ No se pudo reservar:\n" + msg);
             }
-        } catch (error) { console.error(error); alert("Error de conexión."); } 
-        finally { if (btn) { btn.innerText = originalText; btn.disabled = false; } }
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión.");
+        } finally {
+            if (btn) { btn.innerText = originalText; btn.disabled = false; }
+        }
     }
 }
 

@@ -136,7 +136,7 @@
                                                     <span class="area-badge"><t t-esc="img['area']"/> m²</span>
                                                 </div>
                                                 <button class="btn-add-cart" type="button">
-                                                    <i class="fa fa-plus"></i>
+                                                   Apartar
                                                 </button>
                                             </div>
                                         </div>

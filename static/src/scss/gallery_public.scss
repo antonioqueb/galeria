@@ -380,9 +380,11 @@ $border-color: #2d2d2d;
         background: #333;
         border: 1px solid #444;
         color: $text-white;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
+        padding: 6px 12px;
+        border-radius: 20px;
+        white-space: nowrap;
+        font-size: 0.78rem;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
         display: flex;
@@ -401,7 +403,6 @@ $border-color: #2d2d2d;
             background: #28a745;
             border-color: #28a745;
             color: #fff;
-            i::before { content: "\f00c"; } 
         }
     }
 }
