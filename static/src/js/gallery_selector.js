@@ -6,7 +6,7 @@ import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
 import { useDebounced } from "@web/core/utils/timing";
 
-// --- Componente Modal (MODIFICADO PARA BÚSQUEDA) ---
+// --- Componente Modal ---
 class CreateLinkDialog extends Component {
     setup() {
         this.orm = useService("orm");
@@ -19,7 +19,6 @@ class CreateLinkDialog extends Component {
             suggestions: []     
         });
 
-        // Debounce para evitar saturar el servidor al escribir
         this.debouncedSearch = useDebounced(async (term) => {
             if (!term || term.length < 2) {
                 this.state.suggestions = [];
@@ -42,7 +41,6 @@ class CreateLinkDialog extends Component {
     onInputSearch(ev) {
         const term = ev.target.value;
         this.state.query = term;
-        
         if (term === "") {
             this.state.partner_id = false;
             this.state.suggestions = [];
@@ -81,7 +79,6 @@ class CreateLinkDialog extends Component {
     }
 }
 
-// CORRECCIÓN AQUÍ: Usamos el helper xml`...` y eliminamos <t t-name>
 CreateLinkDialog.template = xml`
     <Dialog title="props.title">
         <div class="p-4">
@@ -94,8 +91,6 @@ CreateLinkDialog.template = xml`
 
             <div class="mb-3 position-relative">
                 <label class="form-label fw-bold">Buscar Cliente</label>
-                
-                <!-- INPUT DE BÚSQUEDA -->
                 <div class="input-group">
                     <span class="input-group-text"><i class="fa fa-search"/></span>
                     <input type="text" 
@@ -105,12 +100,9 @@ CreateLinkDialog.template = xml`
                             t-on-input="onInputSearch"
                             autocomplete="off"/>
                 </div>
-
-                <!-- LISTA DESPLEGABLE DE RESULTADOS -->
                 <div t-if="state.suggestions.length > 0" 
                         class="list-group position-absolute w-100 shadow-lg" 
                         style="z-index: 1000; max-height: 200px; overflow-y: auto;">
-                    
                     <t t-foreach="state.suggestions" t-as="p" t-key="p.id">
                         <button type="button" 
                                 class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
@@ -128,7 +120,6 @@ CreateLinkDialog.template = xml`
             <div t-if="state.partner_id" class="alert alert-success py-2 d-flex align-items-center">
                 <i class="fa fa-check-circle me-2"/> Cliente seleccionado
             </div>
-
         </div>
         <t t-set-slot="footer">
             <button class="btn btn-light" t-on-click="props.close">Cancelar</button>
@@ -147,28 +138,56 @@ export class GallerySelector extends Component {
         this.scrollRef = useRef("scrollContainer");
         
         this.state = useState({
+            // Paginación
             allItems: [],       
             visibleItems: [],   
             pageSize: 40,
             currentPage: 1,
-            
-            categories: [],
-            
-            selectedCategory: "",
-            filterProduct: "",  
-            filterBlock: "",    
-            filterBundle: "",
-            search: "",         
-            
-            activeBlock: null,  
-            
-            selectedIds: new Set(), 
+
+            // Filtros activos
+            filters: {
+                product_name: '',
+                almacen_id: '',
+                ubicacion_id: '',
+                tipo: '',
+                categoria_name: '',
+                grupo: '',
+                marca: '',
+                grosor: '',
+                numero_serie: '',
+                bloque: '',
+                pedimento: '',
+                contenedor: '',
+                atado: '',
+                color: '',
+                alto_min: '',
+                ancho_min: '',
+                price_currency: '',
+                price_level: '',
+                price_min: '',
+                price_max: '',
+            },
+
+            // Opciones para dropdowns
+            almacenes: [],
+            ubicaciones: [],
+            tipos: [],
+            categorias: [],
+            grupos: [],
+            marcas: [],
+            grosores: [],
+            colores: [],
+
+            // UI
+            showAdvancedFilters: false,
+            mobileFiltersOpen: false,
+            activeBlock: null,
+            selectedIds: new Set(),
             currentCompanyId: null,
             loading: false,
-            
-            mobileFiltersOpen: false 
         });
 
+        this.searchTimeout = null;
         this.debouncedLoad = useDebounced(() => this.loadImages(), 500);
 
         onWillStart(async () => {
@@ -176,30 +195,153 @@ export class GallerySelector extends Component {
                 this.state.currentCompanyId = await this.orm.call("gallery.share", "get_current_company", []);
             } catch (e) { console.error("Error company:", e); }
 
-            await this.loadCategories();
+            await this.loadFilterOptions();
             await this.loadImages();
         });
     }
 
-    toggleFilters() {
+    // =========================================================
+    //  CARGA DE OPCIONES PARA FILTROS
+    // =========================================================
+
+    async loadFilterOptions() {
+        try {
+            // Almacenes
+            this.state.almacenes = await this.orm.searchRead(
+                "stock.warehouse", [], ["id", "name"], { order: "name" }
+            );
+
+            // Tipos (selection field de stock.quant)
+            try {
+                const fields = await this.orm.call("stock.lot", "fields_get", [["x_tipo"]], { attributes: ["selection"] });
+                this.state.tipos = fields.x_tipo ? fields.x_tipo.selection : [];
+            } catch(e) { this.state.tipos = []; }
+
+            // Categorías de producto
+            this.state.categorias = await this.orm.searchRead(
+                "product.category", [], ["id", "name"], { order: "name", limit: 100 }
+            );
+
+            // Grupos (bloques únicos)
+            try {
+                const lots = await this.orm.searchRead(
+                    "stock.lot", [["x_bloque", "!=", false]], ["x_bloque"], { limit: 500 }
+                );
+                const uniq = [...new Set(lots.map(l => l.x_bloque).filter(Boolean))].sort();
+                this.state.grupos = uniq.map(b => [b, b]);
+            } catch(e) { this.state.grupos = []; }
+
+            // Grosores únicos
+            try {
+                const grosores = await this.orm.call(
+                    "stock.quant", "read_group",
+                    [[["x_grosor", "!=", false], ["quantity", ">", 0]]],
+                    { groupby: ["x_grosor"], fields: ["x_grosor"] }
+                );
+                const grosorSet = new Set();
+                grosores.forEach(g => { if (g.x_grosor) grosorSet.add(g.x_grosor); });
+                this.state.grosores = Array.from(grosorSet).sort((a, b) => a - b);
+            } catch(e) { this.state.grosores = []; }
+
+            // Marcas (x_marca en product.template)
+            try {
+                const marcas = await this.orm.call(
+                    "product.template", "read_group",
+                    [[["x_marca", "!=", false]]],
+                    { groupby: ["x_marca"], fields: ["x_marca"] }
+                );
+                this.state.marcas = marcas.map(m => m.x_marca).filter(Boolean).sort();
+            } catch(e) { this.state.marcas = []; }
+
+            // Colores únicos (x_color en stock.quant)
+            try {
+                const colores = await this.orm.call(
+                    "stock.quant", "read_group",
+                    [[["x_color", "!=", false], ["quantity", ">", 0]]],
+                    { groupby: ["x_color"], fields: ["x_color"] }
+                );
+                this.state.colores = colores.map(c => c.x_color).filter(Boolean).sort();
+            } catch(e) { this.state.colores = []; }
+
+        } catch(e) {
+            console.error("Error cargando opciones de filtros:", e);
+        }
+    }
+
+    async onAlmacenChange(ev) {
+        this.state.filters.almacen_id = ev.target.value;
+        this.state.filters.ubicacion_id = '';
+        this.state.ubicaciones = [];
+
+        if (this.state.filters.almacen_id) {
+            try {
+                this.state.ubicaciones = await this.orm.searchRead(
+                    "stock.location",
+                    [
+                        ["warehouse_id", "=", parseInt(this.state.filters.almacen_id)],
+                        ["usage", "=", "internal"]
+                    ],
+                    ["id", "complete_name"],
+                    { order: "complete_name" }
+                );
+            } catch(e) { this.state.ubicaciones = []; }
+        }
+
+        this.debouncedLoad();
+    }
+
+    // =========================================================
+    //  EVENTOS DE FILTROS
+    // =========================================================
+
+    onFilterChange(field, ev) {
+        this.state.filters[field] = ev.target.value;
+        this.state.activeBlock = null;
+        this.debouncedLoad();
+    }
+
+    onTextFilterChange(field, ev) {
+        this.state.filters[field] = ev.target.value;
+        this.state.activeBlock = null;
+        this.debouncedLoad();
+    }
+
+    toggleAdvancedFilters() {
+        this.state.showAdvancedFilters = !this.state.showAdvancedFilters;
+    }
+
+    toggleMobileFilters() {
         this.state.mobileFiltersOpen = !this.state.mobileFiltersOpen;
     }
 
-    async loadCategories() {
-        try {
-            const parent = await this.orm.searchRead("product.category", [['name', 'ilike', 'Placas']], ["id"], { limit: 1 });
-            let domain = [];
-            if (parent.length > 0) domain = [['parent_id', 'child_of', parent[0].id]];
-            
-            this.state.categories = await this.orm.searchRead("product.category", domain, ["id", "name"], { order: "name" });
-        } catch (e) { console.error(e); }
+    hasActiveFilters() {
+        const f = this.state.filters;
+        return !!(f.product_name || f.almacen_id || f.ubicacion_id || f.tipo ||
+                  f.categoria_name || f.grupo || f.grosor || f.numero_serie ||
+                  f.bloque || f.pedimento || f.contenedor || f.atado || f.color ||
+                  f.alto_min || f.ancho_min || f.price_min || f.price_max);
     }
+
+    clearAllFilters() {
+        const filters = this.state.filters;
+        Object.keys(filters).forEach(k => { filters[k] = ''; });
+        this.state.ubicaciones = [];
+        this.state.activeBlock = null;
+        this.loadImages();
+    }
+
+    // =========================================================
+    //  CARGA DE IMÁGENES
+    // =========================================================
 
     async loadImages() {
         this.state.loading = true;
         this.state.currentPage = 1; 
         
         try {
+            const f = this.state.filters;
+
+            // --- Dominio base para stock.quant ---
             const quantDomain = [
                 ['location_id.usage', '=', 'internal'],
                 ['quantity', '>', 0],
@@ -211,26 +353,106 @@ export class GallerySelector extends Component {
                 quantDomain.unshift(['company_id', '=', this.state.currentCompanyId]);
             }
 
+            // Filtro de almacén / ubicación
+            if (f.ubicacion_id) {
+                quantDomain.push(['location_id', '=', parseInt(f.ubicacion_id)]);
+            } else if (f.almacen_id) {
+                quantDomain.push(['location_id.warehouse_id', '=', parseInt(f.almacen_id)]);
+            }
+
+            // Modo bloque activo
             if (this.state.activeBlock) {
                 quantDomain.push(['lot_id.x_bloque', '=', this.state.activeBlock]);
-                if (this.state.search) quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
-            } 
-            else {
-                if (this.state.search) quantDomain.push(['lot_id.name', 'ilike', this.state.search]);
-                if (this.state.filterBlock) quantDomain.push(['lot_id.x_bloque', 'ilike', this.state.filterBlock]);
-                if (this.state.filterBundle) quantDomain.push(['lot_id.x_atado', 'ilike', this.state.filterBundle]);
-                if (this.state.selectedCategory) quantDomain.push(['product_id.categ_id', 'child_of', parseInt(this.state.selectedCategory)]);
-                
-                if (this.state.filterProduct && this.state.filterProduct.trim() !== "") {
-                    quantDomain.push(['product_id.name', 'ilike', this.state.filterProduct.trim()]);
+            } else {
+                // Búsqueda por nombre de producto
+                if (f.product_name && f.product_name.trim()) {
+                    quantDomain.push(['product_id.name', 'ilike', f.product_name.trim()]);
+                }
+                // Tipo
+                if (f.tipo) {
+                    quantDomain.push(['lot_id.x_tipo', '=', f.tipo]);
+                }
+                // Categoría por nombre
+                if (f.categoria_name && f.categoria_name.trim()) {
+                    quantDomain.push(['product_id.categ_id.name', 'ilike', f.categoria_name.trim()]);
+                }
+                // Grupo (bloque)
+                if (f.grupo && f.grupo.trim()) {
+                    quantDomain.push(['lot_id.x_bloque', 'ilike', f.grupo.trim()]);
+                }
+                // Grosor/Espesor
+                if (f.grosor) {
+                    quantDomain.push(['lot_id.x_grosor', '=', parseFloat(f.grosor)]);
+                }
+                // Alto mínimo
+                if (f.alto_min) {
+                    try { quantDomain.push(['lot_id.x_alto', '>=', parseFloat(f.alto_min)]); } catch(e) {}
+                }
+                // Ancho mínimo
+                if (f.ancho_min) {
+                    try { quantDomain.push(['lot_id.x_ancho', '>=', parseFloat(f.ancho_min)]); } catch(e) {}
+                }
+                // Lote / Número de serie (múltiples separados por coma)
+                if (f.numero_serie && f.numero_serie.trim()) {
+                    const parts = f.numero_serie.split(',').map(s => s.trim()).filter(Boolean);
+                    if (parts.length === 1) {
+                        quantDomain.push(['lot_id.name', 'ilike', parts[0]]);
+                    } else if (parts.length > 1) {
+                        quantDomain.push(['lot_id.name', 'in', parts]);
+                    }
+                }
+                // Bloque explícito
+                if (f.bloque && f.bloque.trim()) {
+                    quantDomain.push(['lot_id.x_bloque', 'ilike', f.bloque.trim()]);
+                }
+                // Pedimento
+                if (f.pedimento && f.pedimento.trim()) {
+                    quantDomain.push(['lot_id.x_pedimento', 'ilike', f.pedimento.trim()]);
+                }
+                // Contenedor
+                if (f.contenedor && f.contenedor.trim()) {
+                    quantDomain.push(['lot_id.x_contenedor', 'ilike', f.contenedor.trim()]);
+                }
+                // Atado
+                if (f.atado && f.atado.trim()) {
+                    quantDomain.push(['lot_id.x_atado', 'ilike', f.atado.trim()]);
+                }
+                // Color
+                if (f.color && f.color.trim()) {
+                    quantDomain.push(['lot_id.x_color', 'ilike', f.color.trim()]);
+                }
+                // Marca
+                if (f.marca && f.marca.trim()) {
+                    quantDomain.push(['product_id.product_tmpl_id.x_marca', 'ilike', f.marca.trim()]);
                 }
             }
 
             const validQuants = await this.orm.searchRead(
-                "stock.quant", quantDomain, ["lot_id"], { limit: 2000 }
+                "stock.quant", quantDomain, ["lot_id", "product_id"], { limit: 2000 }
             );
 
-            const validLotIds = validQuants.map(q => q.lot_id[0]);
+            let validLotIds = validQuants.map(q => q.lot_id[0]);
+
+            // Filtro de precios (post-query sobre product.template)
+            if ((f.price_min || f.price_max) && f.price_currency && f.price_level) {
+                const priceField = `x_price_${f.price_currency.toLowerCase()}_${f.price_level === 'high' ? '1' : '2'}`;
+                const productIds = [...new Set(validQuants.map(q => q.product_id[0]))];
+                
+                const priceFilters = [['id', 'in', productIds]];
+                if (f.price_min) priceFilters.push([priceField, '>=', parseFloat(f.price_min)]);
+                if (f.price_max) priceFilters.push([priceField, '<=', parseFloat(f.price_max)]);
+
+                try {
+                    const matchedProducts = await this.orm.searchRead(
+                        "product.product", priceFilters, ["id"], { limit: 2000 }
+                    );
+                    const matchedProductIds = new Set(matchedProducts.map(p => p.id));
+                    const filteredQuants = validQuants.filter(q => matchedProductIds.has(q.product_id[0]));
+                    validLotIds = filteredQuants.map(q => q.lot_id[0]);
+                } catch(e) {
+                    console.error("Error en filtro de precios:", e);
+                }
+            }
 
             if (validLotIds.length === 0) {
                 this.state.allItems = [];
@@ -315,9 +537,8 @@ export class GallerySelector extends Component {
     }
 
     loadMoreImages() {
-        const start = 0;
         const end = this.state.currentPage * this.state.pageSize;
-        this.state.visibleItems = this.state.allItems.slice(start, end);
+        this.state.visibleItems = this.state.allItems.slice(0, end);
     }
 
     onScroll(ev) {
@@ -330,18 +551,9 @@ export class GallerySelector extends Component {
         }
     }
 
-    // --- Eventos UI ---
-    async onCategoryChange(ev) {
-        this.state.selectedCategory = ev.target.value;
-        this.state.filterProduct = "";
-        this.state.activeBlock = null; 
-        await this.loadImages();
-    }
-
-    onInputSearch(ev, field) {
-        this.state[field] = ev.target.value;
-        this.debouncedLoad();
-    }
+    // =========================================================
+    //  NAVEGACIÓN BLOQUES
+    // =========================================================
 
     openBlock(blockName) {
         this.state.activeBlock = blockName;
@@ -352,6 +564,10 @@ export class GallerySelector extends Component {
         this.state.activeBlock = null;
         this.loadImages();
     }
+
+    // =========================================================
+    //  SELECCIÓN
+    // =========================================================
 
     toggleItemSelection(item) {
         if (item.type === 'block') {
