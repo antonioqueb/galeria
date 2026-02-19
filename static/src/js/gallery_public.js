@@ -204,7 +204,6 @@ class GalleryApp {
                             <span class="area-badge">${areaVal} m²</span>
                         </div>
                         <button class="btn-add-cart" type="button">
-                            <i class="fa fa-plus"></i>
                             <span class="btn-text">Apartar</span>
                         </button>
                     </div>
@@ -322,7 +321,7 @@ class GalleryApp {
                 btn.innerHTML = '<i class="fa fa-check"></i><span class="btn-text"> Apartado</span>';
             } else {
                 btn.classList.remove('in-cart');
-                btn.innerHTML = '<i class="fa fa-plus"></i><span class="btn-text"> Apartar</span>';
+                btn.innerHTML = '<span class="btn-text">Apartar</span>';
             }
         });
     }
