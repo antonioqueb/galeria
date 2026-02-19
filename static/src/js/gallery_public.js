@@ -409,10 +409,213 @@ class GalleryApp {
 
     async confirmReservation() {
         if (this.cart.length === 0) return;
+
+        // Calcular fecha de vencimiento (hoy + 5 días)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 5);
+        const expiryStr = expiryDate.toLocaleDateString('es-MX', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        // --- DISCLAIMER MODAL ---
+        const disclaimer = document.createElement('div');
+        disclaimer.id = 'reservation-disclaimer';
+        disclaimer.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.88); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box;
+            animation: fadeInOverlay 0.25s ease;
+        `;
+        disclaimer.innerHTML = `
+            <style>
+                @keyframes fadeInOverlay {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
+                }
+                @keyframes slideUpModal {
+                    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+                    to   { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                #disclaimer-box {
+                    animation: slideUpModal 0.3s ease forwards;
+                }
+                #disclaimer-confirm:hover {
+                    background: #e6c44a !important;
+                    box-shadow: 0 4px 20px rgba(212,175,55,0.5);
+                    transform: translateY(-1px);
+                }
+                #disclaimer-cancel:hover {
+                    background: rgba(255,255,255,0.07) !important;
+                    border-color: #888 !important;
+                    color: #fff !important;
+                }
+            </style>
+
+            <div id="disclaimer-box" style="
+                background: #1a1a1a;
+                border: 2px solid #d4af37;
+                border-radius: 14px;
+                max-width: 500px;
+                width: 100%;
+                overflow: hidden;
+                box-shadow: 0 0 60px rgba(212,175,55,0.25), 0 20px 60px rgba(0,0,0,0.6);
+            ">
+                <!-- Header dorado -->
+                <div style="
+                    background: linear-gradient(135deg, #c9a227 0%, #e6c84a 50%, #c9a227 100%);
+                    padding: 22px 28px 18px;
+                    text-align: center;
+                    position: relative;
+                ">
+                    <div style="font-size: 2.8rem; line-height: 1; margin-bottom: 8px;">⏳</div>
+                    <h2 style="
+                        margin: 0;
+                        color: #1a1a00;
+                        font-size: 1.15rem;
+                        font-weight: 800;
+                        letter-spacing: 1.5px;
+                        text-transform: uppercase;
+                    ">Aviso Importante</h2>
+                    <p style="margin: 4px 0 0; color: rgba(0,0,0,0.6); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.5px;">
+                        Condiciones del período de apartado
+                    </p>
+                </div>
+
+                <!-- Body -->
+                <div style="padding: 24px 28px 28px;">
+
+                    <!-- Bloque principal de aviso -->
+                    <div style="
+                        background: rgba(212,175,55,0.07);
+                        border: 1px solid rgba(212,175,55,0.25);
+                        border-left: 5px solid #d4af37;
+                        border-radius: 0 10px 10px 0;
+                        padding: 16px 20px;
+                        margin-bottom: 18px;
+                    ">
+                        <p style="
+                            margin: 0 0 10px;
+                            color: #ffffff;
+                            font-size: 1.05rem;
+                            font-weight: 700;
+                            line-height: 1.5;
+                        ">
+                            Las placas seleccionadas quedarán
+                            <span style="color: #d4af37; white-space: nowrap;">apartadas por 5 días calendario.</span>
+                        </p>
+                        <p style="margin: 0; color: #b0b0b0; font-size: 0.87rem; line-height: 1.65;">
+                            Vencimiento estimado:
+                            <strong style="color: #e0e0e0;">${expiryStr}</strong>
+                        </p>
+                    </div>
+
+                    <!-- Aviso de liberación automática -->
+                    <div style="
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                        background: rgba(220, 53, 69, 0.08);
+                        border: 1px solid rgba(220, 53, 69, 0.25);
+                        border-radius: 10px;
+                        padding: 14px 16px;
+                        margin-bottom: 18px;
+                    ">
+                        <span style="font-size: 1.4rem; flex-shrink: 0; line-height: 1;">⚠️</span>
+                        <p style="margin: 0; color: #c8a0a0; font-size: 0.85rem; line-height: 1.65;">
+                            Al vencimiento del período, si no se ha formalizado la compra,
+                            <strong style="color: #e0a0a0;">las placas quedarán disponibles automáticamente</strong>
+                            para otros clientes, sin previo aviso.
+                        </p>
+                    </div>
+
+                    <!-- Nota de contacto -->
+                    <div style="
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                        background: rgba(255,255,255,0.03);
+                        border-radius: 10px;
+                        padding: 12px 16px;
+                        margin-bottom: 22px;
+                    ">
+                        <span style="font-size: 1.2rem; flex-shrink: 0; line-height: 1;">📞</span>
+                        <p style="margin: 0; color: #888; font-size: 0.82rem; line-height: 1.65;">
+                            Para formalizar tu compra antes del vencimiento, 
+                            contacta a tu ejecutivo de cuenta con la referencia que recibirás al confirmar.
+                        </p>
+                    </div>
+
+                    <!-- Aceptación -->
+                    <p style="
+                        text-align: center;
+                        font-size: 0.76rem;
+                        color: #555;
+                        margin: 0 0 20px;
+                        line-height: 1.5;
+                    ">
+                        Al presionar <strong style="color: #888;">"Sí, Apartar Ahora"</strong> confirmas haber leído<br/>
+                        y aceptado las condiciones del período de apartado.
+                    </p>
+
+                    <!-- Botones -->
+                    <div style="display: flex; gap: 12px;">
+                        <button id="disclaimer-cancel" type="button" style="
+                            flex: 1;
+                            padding: 13px 10px;
+                            background: transparent;
+                            border: 1px solid #444;
+                            color: #888;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 0.9rem;
+                            font-weight: 600;
+                            transition: all 0.2s;
+                        ">Cancelar</button>
+
+                        <button id="disclaimer-confirm" type="button" style="
+                            flex: 2;
+                            padding: 13px 10px;
+                            background: #d4af37;
+                            border: none;
+                            color: #000;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 0.95rem;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            transition: all 0.25s;
+                        ">✓ Sí, Apartar Ahora</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(disclaimer);
+        document.body.style.overflow = 'hidden';
+
+        // Esperar decisión del usuario
+        const userConfirmed = await new Promise(resolve => {
+            document.getElementById('disclaimer-cancel').addEventListener('click', () => resolve(false));
+            document.getElementById('disclaimer-confirm').addEventListener('click', () => resolve(true));
+            // Clic en el backdrop cierra sin confirmar
+            disclaimer.addEventListener('click', (e) => {
+                if (e.target === disclaimer) resolve(false);
+            });
+        });
+
+        document.body.removeChild(disclaimer);
+        document.body.style.overflow = '';
+
+        if (!userConfirmed) return;
+
+        // --- PROCESO DE RESERVA ---
         const btn = document.getElementById('btn-confirm');
         const originalText = btn.innerText;
         btn.innerText = "Procesando...";
         btn.disabled = true;
+
         try {
             if (!this.config.token) throw new Error("Token no encontrado.");
             const response = await fetch('/gallery/confirm_reservation', {
