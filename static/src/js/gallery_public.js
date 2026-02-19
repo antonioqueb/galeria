@@ -203,9 +203,7 @@ class GalleryApp {
                             </div>
                             <span class="area-badge">${areaVal} m²</span>
                         </div>
-                        <button class="btn-add-cart" type="button">
-                            <span class="btn-text">Apartar</span>
-                        </button>
+                        <button class="btn-add-cart" type="button">Apartar</button>
                     </div>
                 </div>
             </div>
@@ -318,10 +316,10 @@ class GalleryApp {
 
             if (isSelected) {
                 btn.classList.add('in-cart');
-                btn.innerHTML = '<i class="fa fa-check"></i><span class="btn-text"> Apartado</span>';
+                btn.innerHTML = '<i class="fa fa-check me-1"></i>Apartado';
             } else {
                 btn.classList.remove('in-cart');
-                btn.innerHTML = '<span class="btn-text">Apartar</span>';
+                btn.textContent = 'Apartar';
             }
         });
     }
