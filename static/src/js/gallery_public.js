@@ -316,7 +316,7 @@ class GalleryApp {
 
             if (isSelected) {
                 btn.classList.add('in-cart');
-                btn.innerHTML = '<i class="fa fa-check me-1"></i>Apartado';
+                btn.textContent = 'Apartado';
             } else {
                 btn.classList.remove('in-cart');
                 btn.textContent = 'Apartar';
