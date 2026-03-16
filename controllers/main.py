@@ -2,10 +2,16 @@
 import base64
 import json
 import re
+import logging
+from collections import defaultdict
+
+from markupsafe import Markup
+
 from odoo import http
 from odoo.http import request
-from collections import defaultdict
-from markupsafe import Markup
+
+_logger = logging.getLogger(__name__)
+
 
 class GalleryController(http.Controller):
 
@@ -28,6 +34,8 @@ class GalleryController(http.Controller):
 
         for image in share.image_ids:
             lot = image.lot_id
+            if not lot:
+                continue
 
             quant = StockQuant.search([
                 ('lot_id', '=', lot.id),
@@ -41,7 +49,7 @@ class GalleryController(http.Controller):
             if not quant:
                 continue
 
-            # Calcular Área
+            # Calcular área
             area = 0.0
             if hasattr(lot, 'x_alto') and hasattr(lot, 'x_ancho'):
                 area = (lot.x_alto or 0) * (lot.x_ancho or 0)
@@ -51,13 +59,15 @@ class GalleryController(http.Controller):
             categ = lot.product_id.categ_id
             categ_name = categ.name if categ else "General"
 
-            # ---- FIX AGRUPACIÓN: Manejo robusto de x_bloque ----
-            # x_bloque puede ser: string, int, float, False, None, 0
+            # Manejo robusto de x_bloque
             raw_bloque = getattr(lot, 'x_bloque', None)
             if raw_bloque and str(raw_bloque).strip() and str(raw_bloque).strip() != '0':
                 block_name = str(raw_bloque).strip()
             else:
                 block_name = "NO_BLOCK"
+
+            alto = getattr(lot, 'x_alto', 0.0) or 0.0
+            ancho = getattr(lot, 'x_ancho', 0.0) or 0.0
 
             item_data = {
                 'id': image.id,
@@ -66,34 +76,28 @@ class GalleryController(http.Controller):
                 'name': lot.product_id.name,
                 'lot_name': lot.name,
                 'block_name': block_name,
-                'dimensions': "{:.2f} x {:.2f} m".format(lot.x_alto, lot.x_ancho) if hasattr(lot, 'x_alto') and lot.x_alto else "",
+                'dimensions': "{:.2f} x {:.2f} m".format(alto, ancho) if alto else "",
                 'area': round(area, 2),
                 'url': "/gallery/image/{}/{}".format(token, image.id),
                 'write_date': str(image.write_date),
                 'type': 'single',
-                'is_large': False
+                'is_large': False,
             }
 
             temp_storage[categ_name][block_name].append(item_data)
 
-        # ---- PROCESAMIENTO: >= 2 placas en mismo bloque real -> AGRUPAR ----
-        # (antes era > 4, ahora lo dejamos configurable; usamos >= 2 para que 
-        #  siempre que haya bloque real con más de 1 placa se agrupe)
-        BLOCK_THRESHOLD = 2  # Mínimo de placas para agrupar en bloque
+        # Agrupar si hay 2 o más placas con bloque real
+        BLOCK_THRESHOLD = 2
 
         final_grouped = defaultdict(list)
         blocks_data = {}
 
         for categ, blocks in temp_storage.items():
             for block_name, items in blocks.items():
-
-                # Agrupar si: tiene nombre de bloque real Y cumple el mínimo
                 if block_name != "NO_BLOCK" and len(items) >= BLOCK_THRESHOLD:
-
                     total_area = sum(i['area'] for i in items)
                     first_img = items[0]
 
-                    # Generar ID de bloque seguro y reproducible
                     safe_block_name = re.sub(r'[^a-zA-Z0-9]', '_', block_name)
                     block_id = "BLK_{}_{}".format(safe_block_name, first_img['id'])
 
@@ -108,35 +112,32 @@ class GalleryController(http.Controller):
                         'url': first_img['url'],
                         'is_large': False,
                         'child_ids': [i['id'] for i in items],
-                        'count': len(items)
+                        'count': len(items),
                     }
 
                     final_grouped[categ].append(block_item)
-
-                    # Guardar el detalle de cada placa para el drill-down en JS
-                    # Usamos list(items) para romper la referencia al defaultdict
                     blocks_data[block_id] = list(items)
-
                 else:
-                    # Singles: sin bloque o bloque con 1 sola placa
                     for item in items:
                         final_grouped[categ].append(item)
 
-        # Debug en log del servidor (quitar en producción si se desea)
-        import logging
-        _logger = logging.getLogger(__name__)
         _logger.info(
             "[Gallery] Token=%s | Categorías=%d | Bloques agrupados=%d | Singles=%d",
             token,
             len(final_grouped),
             len(blocks_data),
-            sum(1 for cat_items in final_grouped.values() for i in cat_items if i['type'] == 'single')
+            sum(
+                1
+                for cat_items in final_grouped.values()
+                for i in cat_items
+                if i['type'] == 'single'
+            )
         )
 
         js_gallery_data = {
             'initial_view': dict(final_grouped),
             'blocks_details': blocks_data,
-            'token': token
+            'token': token,
         }
 
         values = {
@@ -144,7 +145,7 @@ class GalleryController(http.Controller):
             'grouped_images': dict(final_grouped),
             'json_data': Markup(json.dumps(js_gallery_data)),
             'company': share.company_id,
-            'token': token
+            'token': token,
         }
         return request.render('galeria.gallery_public_view', values)
 
@@ -165,11 +166,11 @@ class GalleryController(http.Controller):
         headers = [
             ('Content-Type', 'image/jpeg'),
             ('Content-Length', len(image_data)),
-            ('Cache-Control', 'public, max-age=604800')
+            ('Cache-Control', 'public, max-age=604800'),
         ]
         return request.make_response(image_data, headers)
 
-    @http.route('/gallery/confirm_reservation', type='json', auth='public')
+    @http.route('/gallery/confirm_reservation', type='jsonrpc', auth='public', csrf=False)
     def confirm_reservation(self, token, items):
         share = request.env['gallery.share'].sudo().search([
             ('access_token', '=', token)
@@ -193,7 +194,7 @@ class GalleryController(http.Controller):
                 clean_items.append({
                     'quant_id': int(q_id),
                     'lot_id': int(l_id) if l_id and str(l_id).isdigit() else 0,
-                    'name': item.get('name', 'Producto')
+                    'name': item.get('name', 'Producto'),
                 })
 
         if not clean_items:
@@ -202,6 +203,5 @@ class GalleryController(http.Controller):
         try:
             return share.create_public_hold_order(clean_items)
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error("Gallery Reservation Error: %s", str(e))
+            _logger.exception("Gallery Reservation Error")
             return {'success': False, 'message': str(e)}
