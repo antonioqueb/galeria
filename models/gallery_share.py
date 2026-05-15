@@ -164,7 +164,8 @@ class GalleryShare(models.Model):
 
             hold_lines.append((0, 0, {
                 'quant_id': quant.id,
-                'lot_id': quant.lot_id.id,
+                'lot_id': quant.lot_id.id,              # Compatibilidad legacy
+                'lot_ids': [(6, 0, [quant.lot_id.id])], # Campo real que valida stock_lot_dimensions
                 'product_id': product.id,
                 'cantidad_m2': quant.quantity,
                 'precio_unitario': price_unit,
