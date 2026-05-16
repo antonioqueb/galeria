@@ -125,6 +125,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         @include mobile-xs { gap: 6px; }
     }
 
+    /* ===== Botón Volver ===== */
     .btn-back {
         background: transparent;
         border: 1px solid $border-subtle;
@@ -136,7 +137,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         align-items: center;
         gap: 6px;
-        transition: all 0.25s $ease;
+        /* Transición específica (no 'all') para evitar conflictos con el desbordamiento */
+        transition: background 0.25s $ease, border-color 0.25s $ease;
         text-transform: uppercase;
         font-weight: 600;
         letter-spacing: 0.5px;
@@ -159,10 +161,17 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             .btn-back-label { display: none; }
         }
 
+        /* La flechita es la que se anima, no el botón completo:
+           así no se desborda del contenedor con overflow:hidden */
+        i {
+            transition: transform 0.25s $ease;
+        }
+
         &:hover {
             background: $gold-faint;
             border-color: $gold;
-            transform: translateX(-2px);
+
+            i { transform: translateX(-3px); }
         }
     }
 
@@ -473,10 +482,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         animation: fadeInUp 0.6s 0.05s $ease-out backwards;
         max-width: 900px;
 
-        /* Comportamiento de wrap natural:
-           - Prefiere ir al siguiente renglón en espacios
-           - Solo agrega guion automático si UNA palabra no cabe
-           - No corta a la mitad de palabras pequeñas */
         word-break: normal;
         overflow-wrap: break-word;
         hyphens: auto;
@@ -503,7 +508,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             background: linear-gradient(180deg, transparent 65%, rgba(212, 175, 55, 0.08) 65%);
             padding: 0 2px;
 
-            /* Mismo comportamiento de wrap heredado pero explícito */
             word-break: normal;
             overflow-wrap: break-word;
             hyphens: auto;
@@ -602,7 +606,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 background: $border-subtle;
             }
 
-            /* === Stats adicionales solo desktop === */
             &.stat-extra {
                 @include mobile { display: none !important; }
             }
@@ -610,7 +613,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             @include tablet {
                 padding: 16px 16px;
 
-                /* En tablet, ocultar 1 de los extras para no apretar */
                 &.stat-extra:nth-of-type(6) { display: none; }
             }
 
@@ -672,7 +674,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 }
             }
 
-            /* ===== Tipografía de números: Inter premium y muy legible ===== */
             .stat-value {
                 font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                 font-size: 2rem;
@@ -685,7 +686,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 gap: 5px;
                 min-width: 0;
 
-                /* Letras tighter + números alineados (tabular) */
                 letter-spacing: -0.035em;
                 font-variant-numeric: tabular-nums;
                 font-feature-settings: 'tnum' on, 'lnum' on, 'cv11' on;
