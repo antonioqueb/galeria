@@ -68,7 +68,7 @@ class GalleryApp {
                 return;
             }
 
-            // D. Click directo en card (no-block abre lightbox, block abre vista)
+            // D. Click directo en card
             const imgContainer = e.target.closest('.img-container');
             const isButtonInside = e.target.closest('button');
             if (imgContainer && !isButtonInside) {
@@ -143,14 +143,13 @@ class GalleryApp {
             return;
         }
 
-        // Texto del título: solo el número de bloque (#A-12345), en blanco
         const blockLabel = blockLot ? `#${blockLot}` : `#${blockId}`;
 
         const container = document.getElementById('main-gallery-container');
         let html = `
             <div class="category-block">
                 <h2 class="category-title">
-                    <span class="cat-name">${blockLabel}</span>
+                    <span class="cat-name">${this.escapeHtml(blockLabel)}</span>
                     <span class="cat-count">${details.length} placas</span>
                     <span class="line"></span>
                 </h2>
@@ -186,20 +185,31 @@ class GalleryApp {
 
     renderCardHtml(img) {
         const areaVal = (typeof img.area === 'number') ? img.area.toFixed(2) : parseFloat(img.area || 0).toFixed(2);
+
+        const safeId = this.escapeHtml(img.id);
+        const safeQuantId = this.escapeHtml(img.quant_id);
+        const safeLotId = this.escapeHtml(img.lot_id);
+        const safeName = this.escapeHtml(img.name);
+        const safeLotName = this.escapeHtml(img.lot_name);
+        const safeDims = this.escapeHtml(img.dimensions);
+        const safeArea = this.escapeHtml(img.area);
+        const safeUrl = this.escapeHtml(img.url);
+
         return `
             <div class="bento-item"
-                 data-id="${img.id}"
+                 data-id="${safeId}"
                  data-type="single"
-                 data-quant-id="${img.quant_id}"
-                 data-name="${img.name}"
-                 data-lot="${img.lot_name}"
-                 data-dims="${img.dimensions}"
-                 data-area="${img.area}"
-                 data-url="${img.url}">
+                 data-quant-id="${safeQuantId}"
+                 data-lot-id="${safeLotId}"
+                 data-name="${safeName}"
+                 data-lot="${safeLotName}"
+                 data-dims="${safeDims}"
+                 data-area="${safeArea}"
+                 data-url="${safeUrl}">
 
                 <div class="bento-card">
                     <div class="img-container">
-                        <img src="${img.url}" loading="lazy" alt="${img.lot_name}"/>
+                        <img src="${safeUrl}" loading="lazy" alt="${safeLotName}"/>
                         <div class="selection-indicator"><i class="fa fa-check"></i></div>
                         <div class="card-actions">
                             <button class="btn-expand lightbox-trigger" type="button" title="Ampliar">
@@ -210,11 +220,11 @@ class GalleryApp {
                     </div>
                     <div class="card-footer">
                         <div class="info-text">
-                            <span class="product-name">${img.name}</span>
+                            <span class="product-name">${safeName}</span>
                             <div class="meta">
-                                <span class="lot">${img.lot_name}</span>
+                                <span class="lot">${safeLotName}</span>
                                 <span class="sep">·</span>
-                                <span class="dims">${img.dimensions}</span>
+                                <span class="dims">${safeDims}</span>
                             </div>
                             <span class="area-badge">${areaVal} m²</span>
                         </div>
@@ -292,7 +302,9 @@ class GalleryApp {
         this.updateSelectionStates();
     }
 
-    pushToCart(item) { this.cart.push(item); }
+    pushToCart(item) {
+        this.cart.push(item);
+    }
 
     removeFromCart(id, autoSave = true) {
         this.cart = this.cart.filter(item => String(item.id) !== String(id));
@@ -311,17 +323,18 @@ class GalleryApp {
     updateButtonsState() {
         const counter = document.getElementById('cart-count');
         const cartToggleBtn = document.getElementById('cart-toggle');
+
         if (counter) {
             counter.innerText = this.cart.length;
             counter.style.display = this.cart.length > 0 ? 'inline-block' : 'none';
         }
+
         if (cartToggleBtn) {
             this.cart.length > 0
                 ? cartToggleBtn.classList.add('active-cart')
                 : cartToggleBtn.classList.remove('active-cart');
         }
 
-        // Sticky bar móvil
         const stickyBar = document.getElementById('sticky-cart-bar');
         if (stickyBar) {
             if (this.cart.length > 0) {
@@ -394,6 +407,7 @@ class GalleryApp {
     updateCartUI() {
         const container = document.getElementById('cart-items-container');
         if (!container) return;
+
         container.innerHTML = '';
         let totalArea = 0;
 
@@ -407,18 +421,25 @@ class GalleryApp {
         } else {
             this.cart.forEach(item => {
                 totalArea += item.area || 0;
+
+                const safeUrl = this.escapeHtml(item.url);
+                const safeName = this.escapeHtml(item.name);
+                const safeLotName = this.escapeHtml(item.lot_name);
+                const safeDims = this.escapeHtml(item.dims);
+                const safeId = this.escapeHtml(item.id);
+
                 const div = document.createElement('div');
                 div.className = 'cart-item';
                 div.innerHTML = `
-                    <img src="${item.url}" alt="Thumbnail"/>
+                    <img src="${safeUrl}" alt="Thumbnail"/>
                     <div class="item-details">
-                        <h4>${item.name}</h4>
-                        <div class="lot-pill">${item.lot_name}</div>
+                        <h4>${safeName}</h4>
+                        <div class="lot-pill">${safeLotName}</div>
                         <div class="item-meta">
-                            ${item.dims ? item.dims + ' · ' : ''}<span class="area">${(item.area || 0).toFixed(2)} m²</span>
+                            ${safeDims ? safeDims + ' · ' : ''}<span class="area">${(item.area || 0).toFixed(2)} m²</span>
                         </div>
                     </div>
-                    <button class="btn-remove" type="button" data-id="${item.id}" title="Quitar">
+                    <button class="btn-remove" type="button" data-id="${safeId}" title="Quitar">
                         <i class="fa fa-times"></i>
                     </button>
                 `;
@@ -428,6 +449,7 @@ class GalleryApp {
 
         const totalPlatesEl = document.getElementById('total-plates');
         const totalAreaEl = document.getElementById('total-area');
+
         if (totalPlatesEl) totalPlatesEl.innerText = this.cart.length;
         if (totalAreaEl) totalAreaEl.innerText = totalArea.toFixed(2) + ' m²';
 
@@ -440,6 +462,7 @@ class GalleryApp {
     toggleCart() {
         const sidebar = document.getElementById('cart-sidebar');
         const overlay = document.getElementById('cart-overlay');
+
         if (sidebar && overlay) {
             sidebar.classList.toggle('open');
             overlay.classList.toggle('open');
@@ -450,6 +473,7 @@ class GalleryApp {
     openLightbox(btn) {
         const itemEl = btn.closest('.bento-item');
         if (!itemEl) return;
+
         const imgUrl = itemEl.dataset.url;
         const lightbox = document.getElementById('lightbox');
         const img = document.getElementById('lightbox-img');
@@ -462,6 +486,7 @@ class GalleryApp {
         if (infoName) infoName.textContent = itemEl.dataset.name || '';
         if (infoLot) infoLot.textContent = itemEl.dataset.lot || '';
         if (infoDims) infoDims.textContent = itemEl.dataset.dims || '';
+
         const areaVal = parseFloat(itemEl.dataset.area || 0).toFixed(2);
         if (infoArea) infoArea.textContent = areaVal + ' m²';
 
@@ -475,6 +500,7 @@ class GalleryApp {
 
     closeLightbox() {
         const lightbox = document.getElementById('lightbox');
+
         if (lightbox) {
             lightbox.classList.remove('active');
             document.body.style.overflow = '';
@@ -484,6 +510,7 @@ class GalleryApp {
 
     resetZoom() {
         const img = document.getElementById('lightbox-img');
+
         if (img) {
             img.style.transform = 'scale(1)';
             setTimeout(() => { img.style.transformOrigin = 'center center'; }, 300);
@@ -493,29 +520,64 @@ class GalleryApp {
     zoomImage(e) {
         const img = document.getElementById('lightbox-img');
         if (!img) return;
+
         const rect = e.currentTarget.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width * 100;
         const y = (e.clientY - rect.top) / rect.height * 100;
+
         img.style.transformOrigin = `${x}% ${y}%`;
         img.style.transform = 'scale(2.4)';
     }
 
+    escapeHtml(value) {
+        return String(value || '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    openWhatsApp(url) {
+        if (!url) return false;
+
+        let opened = null;
+
+        try {
+            opened = window.open(url, '_blank');
+            if (opened) {
+                try { opened.opener = null; } catch (error) {}
+                try { opened.focus(); } catch (error) {}
+                return true;
+            }
+        } catch (error) {
+            opened = null;
+        }
+
+        // Si el navegador bloquea el popup, se abre en la misma pestaña.
+        window.location.href = url;
+        return false;
+    }
+
     showToast(message, type = 'info') {
         let toast = document.getElementById('gallery-toast');
+
         if (!toast) {
             toast = document.createElement('div');
             toast.id = 'gallery-toast';
             toast.className = 'gallery-toast';
             document.body.appendChild(toast);
         }
+
         const iconMap = {
             success: 'fa-check-circle',
             warning: 'fa-exclamation-triangle',
             error: 'fa-times-circle',
             info: 'fa-info-circle'
         };
+
         toast.className = `gallery-toast ${type}`;
-        toast.innerHTML = `<i class="fa ${iconMap[type] || iconMap.info}"></i><span>${message}</span>`;
+        toast.innerHTML = `<i class="fa ${iconMap[type] || iconMap.info}"></i><span>${this.escapeHtml(message)}</span>`;
 
         clearTimeout(this._toastTimer);
         requestAnimationFrame(() => toast.classList.add('show'));
@@ -524,6 +586,7 @@ class GalleryApp {
 
     animateOnScroll() {
         const items = document.querySelectorAll('.bento-item');
+
         items.forEach((el, idx) => {
             el.style.animationDelay = `${Math.min(idx * 30, 600)}ms`;
         });
@@ -534,8 +597,12 @@ class GalleryApp {
 
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 5);
+
         const expiryStr = expiryDate.toLocaleDateString('es-MX', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
 
         const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0).toFixed(2);
@@ -548,6 +615,7 @@ class GalleryApp {
             display:flex;align-items:center;justify-content:center;
             padding:20px;box-sizing:border-box;animation:fadeInOverlay 0.25s ease;
         `;
+
         disclaimer.innerHTML = `
             <style>
                 @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
@@ -580,7 +648,7 @@ class GalleryApp {
                             Apartado por <span style="color:#d4af37;">5 días calendario</span>
                         </p>
                         <p style="margin:0;color:#b0b0b0;font-size:0.82rem;line-height:1.6;">
-                            Vencimiento: <strong style="color:#e0e0e0;">${expiryStr}</strong>
+                            Vencimiento: <strong style="color:#e0e0e0;">${this.escapeHtml(expiryStr)}</strong>
                         </p>
                     </div>
 
@@ -592,9 +660,9 @@ class GalleryApp {
                     </div>
 
                     <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,0.02);border-radius:10px;padding:11px 14px;margin-bottom:20px;">
-                        <i class="fa fa-phone" style="color:#888;font-size:0.9rem;margin-top:2px;flex-shrink:0;"></i>
+                        <i class="fa-brands fa-whatsapp" style="color:#25D366;font-size:1rem;margin-top:2px;flex-shrink:0;"></i>
                         <p style="margin:0;color:#888;font-size:0.78rem;line-height:1.6;">
-                            Para formalizar tu compra, contacta a tu ejecutivo con la referencia que recibirás al confirmar.
+                            Al confirmar, se abrirá WhatsApp con un mensaje listo para avisar a tu ejecutivo. Solo tendrás que presionar enviar.
                         </p>
                     </div>
 
@@ -614,7 +682,9 @@ class GalleryApp {
         const userConfirmed = await new Promise(resolve => {
             document.getElementById('disclaimer-cancel').addEventListener('click', () => resolve(false));
             document.getElementById('disclaimer-confirm').addEventListener('click', () => resolve(true));
-            disclaimer.addEventListener('click', (e) => { if (e.target === disclaimer) resolve(false); });
+            disclaimer.addEventListener('click', (e) => {
+                if (e.target === disclaimer) resolve(false);
+            });
         });
 
         document.body.removeChild(disclaimer);
@@ -623,69 +693,169 @@ class GalleryApp {
         if (!userConfirmed) return;
 
         const btn = document.getElementById('btn-confirm');
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
-        btn.disabled = true;
+        const originalHTML = btn ? btn.innerHTML : '';
+
+        if (btn) {
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
+            btn.disabled = true;
+        }
 
         try {
             if (!this.config.token) throw new Error('Token no encontrado.');
+
             const response = await fetch('/gallery/confirm_reservation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    jsonrpc: '2.0', method: 'call',
-                    params: { token: this.config.token, items: this.cart },
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {
+                        token: this.config.token,
+                        items: this.cart
+                    },
                     id: Math.floor(Math.random() * 1000)
                 })
             });
+
             const result = await response.json();
+
             if (result.result && result.result.success) {
-                this.showSuccessModal(result.result.order_name);
+                const whatsappUrl = result.result.whatsapp_url || '';
+                const salespersonName = result.result.salesperson_name || '';
+
+                this.showSuccessModal(
+                    result.result.order_name,
+                    whatsappUrl,
+                    salespersonName
+                );
+
                 this.cart = [];
                 this.saveCart();
                 this.updateCartUI();
-                setTimeout(() => window.location.reload(), 4500);
+                this.updateButtonsState();
+                this.updateSelectionStates();
+
+                if (whatsappUrl) {
+                    setTimeout(() => {
+                        this.openWhatsApp(whatsappUrl);
+                    }, 900);
+
+                    setTimeout(() => window.location.reload(), 9000);
+                } else {
+                    this.showToast(
+                        'Reserva creada. El vendedor no tiene celular configurado para WhatsApp.',
+                        'warning'
+                    );
+                    setTimeout(() => window.location.reload(), 5500);
+                }
             } else {
                 const msg = result.error
                     ? result.error.data.message
                     : (result.result ? result.result.message : 'Error desconocido');
+
                 this.showToast('No se pudo reservar: ' + msg, 'error');
-                if (btn) { btn.innerHTML = originalHTML; btn.disabled = false; }
+
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
             }
         } catch (error) {
             console.error(error);
             this.showToast('Error de conexión', 'error');
-            if (btn) { btn.innerHTML = originalHTML; btn.disabled = false; }
+
+            if (btn) {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
         }
     }
 
-    showSuccessModal(orderName) {
+    showSuccessModal(orderName, whatsappUrl = '', salespersonName = '') {
+        const safeOrderName = this.escapeHtml(orderName);
+        const safeWhatsappUrl = this.escapeHtml(whatsappUrl);
+        const safeSalespersonName = this.escapeHtml(salespersonName || 'tu ejecutivo');
+
+        const whatsappBlock = whatsappUrl ? `
+            <div style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.28);border-radius:12px;padding:14px;margin-bottom:18px;text-align:left;">
+                <div style="display:flex;align-items:flex-start;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <div style="color:#fff;font-weight:800;font-size:0.88rem;margin-bottom:4px;">
+                            WhatsApp listo para ${safeSalespersonName}
+                        </div>
+                        <div style="color:#9fd8b4;font-size:0.76rem;line-height:1.5;">
+                            Se abrirá una conversación con el mensaje precargado para avisar que ya realizaste el apartado.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="${safeWhatsappUrl}"
+               target="_blank"
+               rel="noopener noreferrer"
+               style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#25D366,#1da851);color:#fff;border:none;border-radius:10px;padding:13px 14px;text-decoration:none;font-size:0.88rem;font-weight:900;text-transform:uppercase;letter-spacing:0.8px;box-shadow:0 6px 20px rgba(37,211,102,0.28);margin-bottom:14px;">
+                <i class="fa-brands fa-whatsapp"></i>
+                Abrir WhatsApp
+            </a>
+        ` : `
+            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:12px;padding:13px 14px;margin-bottom:18px;text-align:left;">
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                    <i class="fa fa-triangle-exclamation" style="color:#fbbf24;margin-top:2px;"></i>
+                    <p style="margin:0;color:#f6d58a;font-size:0.78rem;line-height:1.5;">
+                        La reserva fue creada, pero el vendedor no tiene celular configurado para generar el WhatsApp automático.
+                    </p>
+                </div>
+            </div>
+        `;
+
         const modal = document.createElement('div');
         modal.style.cssText = `
             position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;
             display:flex;align-items:center;justify-content:center;padding:20px;
             animation:fadeInOverlay 0.3s ease;
         `;
+
         modal.innerHTML = `
             <style>
                 @keyframes successPop { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
                 @keyframes checkDraw { from{stroke-dashoffset:60} to{stroke-dashoffset:0} }
             </style>
-            <div style="background:#0f0f0f;border:1px solid rgba(212,175,55,0.3);border-radius:20px;max-width:460px;width:100%;padding:42px 32px 36px;text-align:center;box-shadow:0 0 100px rgba(212,175,55,0.25);animation:successPop 0.55s cubic-bezier(0.16,1,0.3,1);">
+
+            <div style="background:#0f0f0f;border:1px solid rgba(212,175,55,0.3);border-radius:20px;max-width:480px;width:100%;padding:42px 32px 36px;text-align:center;box-shadow:0 0 100px rgba(212,175,55,0.25);animation:successPop 0.55s cubic-bezier(0.16,1,0.3,1);">
                 <div style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);margin:0 auto 22px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(34,197,94,0.4);">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12" style="stroke-dasharray:60;animation:checkDraw 0.6s 0.2s ease forwards;stroke-dashoffset:60;"/>
                     </svg>
                 </div>
-                <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:2rem;color:#fff;margin:0 0 8px;font-weight:500;">¡Reserva Confirmada!</h2>
-                <p style="color:#b0b0b0;margin:0 0 22px;font-size:0.9rem;line-height:1.55;">Tus placas quedaron apartadas exclusivamente para ti.</p>
+
+                <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:2rem;color:#fff;margin:0 0 8px;font-weight:500;">
+                    ¡Reserva Confirmada!
+                </h2>
+
+                <p style="color:#b0b0b0;margin:0 0 22px;font-size:0.9rem;line-height:1.55;">
+                    Tus placas quedaron apartadas exclusivamente para ti.
+                </p>
+
                 <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:10px;padding:14px;margin-bottom:18px;">
-                    <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">Tu referencia</div>
-                    <div style="font-size:1.3rem;color:#d4af37;font-weight:800;letter-spacing:1px;">${orderName}</div>
+                    <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">
+                        Tu referencia
+                    </div>
+                    <div style="font-size:1.3rem;color:#d4af37;font-weight:800;letter-spacing:1px;">
+                        ${safeOrderName}
+                    </div>
                 </div>
-                <p style="color:#777;font-size:0.78rem;margin:0;line-height:1.55;">Comparte esta referencia con tu ejecutivo para formalizar tu compra.</p>
+
+                ${whatsappBlock}
+
+                <p style="color:#777;font-size:0.78rem;margin:0;line-height:1.55;">
+                    Conserva esta referencia para formalizar tu compra con tu ejecutivo.
+                </p>
             </div>
         `;
+
         document.body.appendChild(modal);
     }
 }

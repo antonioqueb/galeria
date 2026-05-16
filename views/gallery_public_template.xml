@@ -265,10 +265,6 @@
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
 
-                                    <!-- data-lot:
-                                         - Si es BLOQUE -> usa block_name (ej: B-2024-037)
-                                         - Si es PLACA -> usa lot_name (lote individual)
-                                         Fallback a img['id'] si block_name no existe. -->
                                     <div t-attf-class="bento-item #{'bento-large' if img.get('is_large') else ''} #{'is-block' if img['type'] == 'block' else ''}"
                                          t-att-data-id="img['id']"
                                          t-att-data-type="img['type']"
@@ -481,17 +477,11 @@
             <!-- =====================================================
                  CONTACTO WHATSAPP
                  ===================================================== -->
-            <t t-set="salesperson_partner" t-value="share.user_id.partner_id"/>
-            <t t-set="salesperson_phone"
-               t-value="(('mobile' in salesperson_partner._fields and salesperson_partner.mobile) or ('phone' in salesperson_partner._fields and salesperson_partner.phone) or '')"/>
-            <t t-set="salesperson_phone_clean"
-               t-value="salesperson_phone and salesperson_phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('.', '').replace('+', '') or ''"/>
-
-            <div class="contact-fab" t-if="salesperson_phone_clean">
+            <div class="contact-fab" t-if="share.salesperson_whatsapp_url">
                 <a class="fab-button"
-                   t-att-href="'https://wa.me/%s' % salesperson_phone_clean"
+                   t-att-href="share.salesperson_whatsapp_url"
                    target="_blank"
-                   rel="noopener"
+                   rel="noopener noreferrer"
                    aria-label="Contactar por WhatsApp">
                     <i class="fa-brands fa-whatsapp"></i>
                 </a>

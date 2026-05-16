@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import uuid
+import re
 from datetime import timedelta
+from urllib.parse import quote
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -71,6 +73,17 @@ class GalleryShare(models.Model):
         compute='_compute_share_url'
     )
 
+    salesperson_whatsapp_number = fields.Char(
+        string="WhatsApp del vendedor",
+        compute="_compute_salesperson_whatsapp",
+        readonly=True
+    )
+    salesperson_whatsapp_url = fields.Char(
+        string="Liga WhatsApp del vendedor",
+        compute="_compute_salesperson_whatsapp",
+        readonly=True
+    )
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -96,6 +109,18 @@ class GalleryShare(models.Model):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         for record in self:
             record.share_url = f"{base_url}/gallery/view/{record.access_token}"
+
+    @api.depends('user_id', 'user_id.partner_id', 'user_id.partner_id.mobile', 'user_id.partner_id.phone')
+    def _compute_salesperson_whatsapp(self):
+        for record in self:
+            number = record._get_salesperson_whatsapp_number()
+            record.salesperson_whatsapp_number = number or False
+
+            if number:
+                message = record._build_public_gallery_contact_message()
+                record.salesperson_whatsapp_url = record._build_whatsapp_url(number, message)
+            else:
+                record.salesperson_whatsapp_url = False
 
     def action_regenerate_token(self):
         self.access_token = str(uuid.uuid4())
@@ -139,6 +164,237 @@ class GalleryShare(models.Model):
     def get_current_company(self):
         return self.env.company.id
 
+    # =========================================================
+    # WhatsApp
+    # =========================================================
+
+    def _clean_phone_digits(self, phone):
+        """
+        Limpia cualquier teléfono para dejar solo dígitos.
+        """
+        if not phone:
+            return ""
+
+        digits = re.sub(r'\D+', '', str(phone or '').strip())
+
+        # Prefijo internacional escrito como 0052...
+        if digits.startswith('00'):
+            digits = digits[2:]
+
+        return digits
+
+    def _normalize_whatsapp_phone_mx(self, phone):
+        """
+        Normaliza teléfonos para WhatsApp.
+
+        Reglas principales:
+        - 10 dígitos mexicanos -> 52 + número.
+        - 52 + 10 dígitos -> se respeta.
+        - 521 + 10 dígitos -> se corrige a 52 + 10 dígitos.
+        - 044/045 + 10 dígitos -> se corrige a 52 + 10 dígitos.
+        - 01 + 10 dígitos -> se corrige a 52 + 10 dígitos.
+        """
+        digits = self._clean_phone_digits(phone)
+
+        if not digits:
+            return ""
+
+        # México antiguo móvil: 521 + 10 dígitos.
+        # WhatsApp moderno usa 52 + 10 dígitos.
+        if digits.startswith('521') and len(digits) == 13:
+            digits = '52' + digits[3:]
+
+        # Marcaciones nacionales antiguas: 044/045 + 10 dígitos.
+        if (digits.startswith('044') or digits.startswith('045')) and len(digits) == 13:
+            digits = '52' + digits[3:]
+
+        # Lada nacional antigua: 01 + 10 dígitos.
+        if digits.startswith('01') and len(digits) == 12:
+            digits = '52' + digits[2:]
+
+        # Número mexicano local a 10 dígitos.
+        if len(digits) == 10:
+            digits = '52' + digits
+
+        # Número mexicano ya con código país.
+        if digits.startswith('52') and len(digits) == 12:
+            return digits
+
+        # Si viene como internacional de otro país, se deja tal cual.
+        # wa.me no acepta +, espacios ni signos.
+        return digits
+
+    def _read_first_char_field(self, record, field_names):
+        """
+        Lee de forma segura el primer campo tipo char disponible.
+        Evita depender directamente de módulos como hr.
+        """
+        if not record:
+            return ""
+
+        for field_name in field_names:
+            if field_name in record._fields:
+                value = record[field_name]
+                if value:
+                    return value
+
+        return ""
+
+    def _get_salesperson_raw_work_mobile(self):
+        """
+        Obtiene el celular laboral del vendedor.
+
+        Prioridad:
+        1. Empleado vinculado: mobile_phone.
+        2. Contacto del usuario: mobile.
+        3. Usuario: mobile, si existe.
+        4. Contacto / empleado / usuario phone como fallback.
+        """
+        self.ensure_one()
+
+        user = self.user_id.sudo()
+        partner = user.partner_id.sudo() if user and user.partner_id else self.env['res.partner'].sudo().browse()
+
+        # 1) Celular laboral desde empleado si existe hr.employee.
+        if user and 'employee_id' in user._fields and user.employee_id:
+            employee = user.employee_id.sudo()
+            value = self._read_first_char_field(employee, [
+                'mobile_phone',
+                'work_mobile',
+                'phone',
+                'work_phone',
+            ])
+            if value:
+                return value
+
+        # 2) Celular del contacto relacionado al usuario.
+        value = self._read_first_char_field(partner, [
+            'mobile',
+        ])
+        if value:
+            return value
+
+        # 3) Celular directo en res.users, si existe.
+        value = self._read_first_char_field(user, [
+            'mobile',
+            'mobile_phone',
+            'work_mobile',
+        ])
+        if value:
+            return value
+
+        # 4) Fallback a teléfono.
+        value = self._read_first_char_field(partner, [
+            'phone',
+        ])
+        if value:
+            return value
+
+        value = self._read_first_char_field(user, [
+            'phone',
+            'work_phone',
+        ])
+        if value:
+            return value
+
+        return ""
+
+    def _get_salesperson_whatsapp_number(self):
+        """
+        Devuelve el número listo para wa.me, sin +, espacios ni signos.
+        """
+        self.ensure_one()
+
+        raw_phone = self._get_salesperson_raw_work_mobile()
+        return self._normalize_whatsapp_phone_mx(raw_phone)
+
+    def _build_whatsapp_url(self, number, message):
+        """
+        Construye URL wa.me con mensaje precargado.
+        """
+        number = self._clean_phone_digits(number)
+        if not number:
+            return ""
+
+        encoded_message = quote(message or '', safe='')
+        return f"https://wa.me/{number}?text={encoded_message}"
+
+    def _build_public_gallery_contact_message(self):
+        """
+        Mensaje genérico para el botón flotante de WhatsApp del catálogo.
+        """
+        self.ensure_one()
+
+        seller_name = self.user_id.name or "mi ejecutivo"
+        client_name = self.partner_id.name or "cliente"
+
+        return (
+            f"Hola {seller_name}, soy {client_name}.\n\n"
+            f"Estoy revisando mi catálogo privado {self.name} y me interesa recibir apoyo con la selección de placas.\n\n"
+            f"¿Me ayudas a resolver unas dudas y continuar con el proceso?"
+        )
+
+    def _build_public_hold_whatsapp_message(self, order, total_pieces=0, total_area=0.0):
+        """
+        Mensaje que se envía al vendedor después de confirmar el apartado.
+        """
+        self.ensure_one()
+
+        seller_name = self.user_id.name or "mi ejecutivo"
+        client_name = self.partner_id.name or "cliente"
+        order_name = order.name or "sin folio"
+
+        pieces_label = "placa" if total_pieces == 1 else "placas"
+
+        return (
+            f"Hola {seller_name}, soy {client_name}.\n\n"
+            f"Ya confirmé mi apartado desde el catálogo privado que me compartiste.\n\n"
+            f"Folio de apartado: {order_name}\n"
+            f"Catálogo: {self.name}\n"
+            f"Selección: {total_pieces} {pieces_label} · {total_area:.2f} m²\n\n"
+            f"Me interesa asegurar estas piezas y continuar con el siguiente paso para formalizar mi compra. "
+            f"¿Me ayudas a revisar la disponibilidad final, condiciones y forma de pago?"
+        )
+
+    def _build_public_hold_whatsapp_payload(self, order, total_pieces=0, total_area=0.0):
+        """
+        Payload de WhatsApp para devolverlo al frontend.
+        """
+        self.ensure_one()
+
+        number = self._get_salesperson_whatsapp_number()
+
+        if not number:
+            _logger.warning(
+                "[Gallery] No se encontró celular/WhatsApp para el vendedor | Share=%s | User=%s | Order=%s",
+                self.name,
+                self.user_id.name,
+                order.name if order else '',
+            )
+            return {
+                'number': False,
+                'url': False,
+                'message': False,
+                'salesperson_name': self.user_id.name or '',
+            }
+
+        message = self._build_public_hold_whatsapp_message(
+            order=order,
+            total_pieces=total_pieces,
+            total_area=total_area,
+        )
+
+        return {
+            'number': number,
+            'url': self._build_whatsapp_url(number, message),
+            'message': message,
+            'salesperson_name': self.user_id.name or '',
+        }
+
+    # =========================================================
+    # Reserva pública
+    # =========================================================
+
     def _get_public_hold_price(self, product):
         """
         Precio usado para reservas públicas creadas desde galería.
@@ -165,12 +421,8 @@ class GalleryShare(models.Model):
         Crea una orden de reserva basada en la selección del cliente externo.
 
         Corrección importante:
-        - Antes se creaba una línea de apartado por cada lote seleccionado.
-        - Ahora se agrupan los lotes por producto.
-        - Resultado esperado:
-            Producto A
-                lot_ids = [lote 1, lote 2, lote 3]
-                cantidad_m2 = suma de m² de los lotes
+        - Agrupa los lotes por producto.
+        - Devuelve liga WhatsApp del vendedor con mensaje precargado.
         """
         self.ensure_one()
 
@@ -295,6 +547,9 @@ class GalleryShare(models.Model):
                 "No se pudieron generar líneas de reserva para los materiales seleccionados."
             )
 
+        total_pieces = len(processed_lot_ids)
+        total_area = sum(group['cantidad_m2'] for group in grouped_lines.values())
+
         try:
             order = HoldOrder.create({
                 'partner_id': self.partner_id.id,
@@ -308,18 +563,29 @@ class GalleryShare(models.Model):
 
             order.action_confirm()
 
+            whatsapp_payload = self._build_public_hold_whatsapp_payload(
+                order=order,
+                total_pieces=total_pieces,
+                total_area=total_area,
+            )
+
             _logger.info(
-                "[Gallery] Reserva pública creada agrupando por producto | Share=%s | Orden=%s | Líneas=%s | Lotes=%s",
+                "[Gallery] Reserva pública creada agrupando por producto | Share=%s | Orden=%s | Líneas=%s | Lotes=%s | WhatsApp=%s",
                 self.name,
                 order.name,
                 len(hold_lines),
-                len(processed_lot_ids),
+                total_pieces,
+                bool(whatsapp_payload.get('url')),
             )
 
             return {
                 'success': True,
                 'order_name': order.name,
                 'message': 'Reserva confirmada exitosamente.',
+                'whatsapp_url': whatsapp_payload.get('url') or False,
+                'whatsapp_number': whatsapp_payload.get('number') or False,
+                'whatsapp_message': whatsapp_payload.get('message') or False,
+                'salesperson_name': whatsapp_payload.get('salesperson_name') or '',
             }
 
         except Exception as e:
