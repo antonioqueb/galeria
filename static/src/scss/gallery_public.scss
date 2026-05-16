@@ -34,6 +34,7 @@ $ease: cubic-bezier(0.4, 0, 0.2, 1);
 $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
 @mixin mobile { @media (max-width: 767px) { @content; } }
+@mixin mobile-xs { @media (max-width: 400px) { @content; } }
 @mixin tablet { @media (min-width: 768px) and (max-width: 1023px) { @content; } }
 @mixin desktop { @media (min-width: 1024px) { @content; } }
 
@@ -110,9 +111,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         align-items: center;
         gap: 14px;
-        min-width: 0;          /* crítico: permite que los hijos se reduzcan */
+        min-width: 0;
         flex: 1 1 auto;
-        overflow: hidden;       /* contiene cualquier texto largo */
+        overflow: hidden;
 
         @include mobile { gap: 8px; }
     }
@@ -133,13 +134,21 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-weight: 600;
         letter-spacing: 0.5px;
         white-space: nowrap;
-        flex-shrink: 0;
+        flex-shrink: 0;          /* nunca se reduce */
 
         @include mobile {
-            padding: 5px 10px;
-            font-size: 0.68rem;
+            padding: 6px 12px;
+            font-size: 0.7rem;
             letter-spacing: 0.3px;
-            gap: 4px;
+            gap: 5px;
+        }
+
+        /* Ultra-compacto: solo flecha, sin texto "Volver" */
+        @include mobile-xs {
+            padding: 6px 10px;
+            gap: 0;
+
+            .btn-back-label { display: none; }
         }
 
         &:hover {
@@ -153,7 +162,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
         line-height: 1;
-        min-width: 0;            /* crítico */
+        min-width: 0;
         flex: 1 1 auto;
         overflow: hidden;
 
@@ -194,11 +203,25 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
     }
 
+    /* ===== Reorganización cuando aparece btn-back =====
+       En móvil con btn-back activo, priorizar: btn-back + cart.
+       El brand-sub se oculta (la ref CAT/XXXX ya está en el hero).
+       El brand-row se compacta más para no competir por espacio. */
+    @include mobile {
+        .brand-area:has(.btn-back[style*="flex"]) {
+            .brand .brand-sub { display: none; }
+            .brand .brand-row {
+                font-size: 0.72rem;
+                letter-spacing: 1px;
+            }
+        }
+    }
+
     .header-actions {
         display: flex;
         align-items: center;
         gap: 12px;
-        flex-shrink: 0;          /* nunca se reduce, mantiene el carrito accesible */
+        flex-shrink: 0;
 
         @include mobile { gap: 6px; }
     }
@@ -214,7 +237,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         max-width: 240px;
         min-width: 0;
 
-        /* En tablet/laptop pequeño limita el ancho para que no se coma el header */
         @media (min-width: 768px) and (max-width: 1100px) {
             max-width: 180px;
             padding: 5px 10px 5px 5px;
@@ -285,6 +307,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             gap: 5px;
         }
 
+        @include mobile-xs {
+            padding: 7px 10px;
+        }
+
         &:hover {
             background: rgba(255, 255, 255, 0.06);
             border-color: $text-tertiary;
@@ -352,7 +378,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         margin: 0 auto;
         padding: 0 16px;
         min-width: 0;
-        overflow: hidden;        /* contiene nombres ultra largos */
+        overflow: hidden;
 
         @include mobile { padding: 0 14px; }
     }
@@ -394,7 +420,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         margin: 0 0 10px;
         animation: fadeInUp 0.6s 0.05s $ease-out backwards;
         word-break: break-word;
-        overflow-wrap: anywhere;  /* nombres muy largos rompen línea */
+        overflow-wrap: anywhere;
         hyphens: auto;
         max-width: 100%;
 
