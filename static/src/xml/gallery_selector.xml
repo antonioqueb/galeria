@@ -1,412 +1,379 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve">
-    
-    <t t-name="galeria.GallerySelector" owl="1">
-        <div class="o_gallery_app h-100 d-flex flex-column text-900 position-relative">
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Layout Base Independiente (Dark Mode Premium) -->
+    <template id="gallery_layout_headless">
+        &lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
+                <meta name="theme-color" content="#0a0a0a"/>
+                <title t-esc="title or 'Catálogo Exclusivo'"/>
 
-            <!-- ===== BARRA DE FILTROS ===== -->
-            <div class="o_gallery_searchbar flex-shrink-0 bg-white border-bottom shadow-sm px-3 py-2">
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500;1,600&amp;display=swap" rel="stylesheet"/>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
-                <!-- FILA MÓVIL: Búsqueda + Toggle filtros -->
-                <div class="d-flex d-md-none align-items-center gap-2 mb-2">
-                    <div class="input-group input-group-sm flex-grow-1">
-                        <span class="input-group-text"><i class="fa fa-search"/></span>
-                        <input type="text" class="form-control" placeholder="Buscar producto..."
-                               t-att-value="state.filters.product_name"
-                               t-on-input="(ev) => this.onTextFilterChange('product_name', ev)"/>
-                    </div>
-                    <button class="btn btn-sm btn-outline-secondary position-relative" 
-                            t-on-click="toggleMobileFilters"
-                            type="button">
-                        <i class="fa fa-filter"/>
-                        <t t-if="hasActiveFilters()">
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px;">!</span>
-                        </t>
-                    </button>
-                </div>
+                <t t-call-assets="web.assets_frontend" t-js="false"/>
 
-                <!-- FILTROS PRINCIPALES (siempre visibles en Desktop, toggle en Móvil) -->
-                <div t-att-class="'row g-2 align-items-end' + (state.mobileFiltersOpen ? '' : ' d-none d-md-flex')">
+                <style>
+                    body {
+                        margin: 0; padding: 0;
+                        background-color: #0a0a0a;
+                        color: #e0e0e0;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                        overflow-x: hidden;
+                        -webkit-font-smoothing: antialiased;
+                        -moz-osx-font-smoothing: grayscale;
+                    }
+                    a { text-decoration: none; }
+                    * { -webkit-tap-highlight-color: transparent; }
+                    img { display: block; max-width: 100%; }
+                    button { font-family: inherit; }
+                </style>
+            </head>
+            <body>
+                <main>
+                    <t t-out="0"/>
+                </main>
+                <t t-call-assets="web.assets_frontend" t-css="false"/>
+            </body>
+        </html>
+    </template>
 
-                    <!-- Búsqueda por Producto (solo Desktop) -->
-                    <div class="col-md-2 d-none d-md-block">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small">Producto</label>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text"><i class="fa fa-search"/></span>
-                            <input type="text" class="form-control" placeholder="Nombre..."
-                                   t-att-value="state.filters.product_name"
-                                   t-on-input="(ev) => this.onTextFilterChange('product_name', ev)"/>
+    <!-- Vista Principal -->
+    <template id="gallery_public_view">
+        <t t-call="galeria.gallery_layout_headless">
+            <t t-set="title">Catálogo Exclusivo · <t t-esc="share.partner_id.name"/></t>
+
+            <!-- DATA ISLAND -->
+            <script>
+                window.galleryRawData = <t t-out="json_data"/>;
+            </script>
+
+            <div class="gallery-wrapper">
+
+                <!-- ===== HEADER FIJO ===== -->
+                <header class="gallery-header">
+                    <div class="header-content">
+                        <div class="brand-area">
+                            <button id="btn-back-gallery" class="btn-back" style="display: none;">
+                                <i class="fa fa-arrow-left"/> Volver
+                            </button>
+                            <div class="brand">
+                                <span class="brand-row">SOM <span class="light">GALLERY</span></span>
+                                <span class="brand-sub">Catálogo Privado · <t t-esc="share.name"/></span>
+                            </div>
+                        </div>
+
+                        <div class="header-actions">
+                            <div class="client-pill">
+                                <div class="avatar">
+                                    <t t-esc="(share.partner_id.name or 'C')[:1].upper()"/>
+                                </div>
+                                <div class="info">
+                                    <span class="label">Curado para</span>
+                                    <span class="name" t-field="share.partner_id.name"/>
+                                </div>
+                            </div>
+                            <button id="cart-toggle" class="btn-cart" title="Tu selección">
+                                <i class="fa fa-shopping-bag"/>
+                                <span id="cart-count" class="badge">0</span>
+                            </button>
                         </div>
                     </div>
+                </header>
 
-                    <!-- Almacén -->
-                    <div class="col-6 col-md-2">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Almacén</label>
-                        <select class="form-select form-select-sm"
-                                t-model="state.filters.almacen_id"
-                                t-on-change="onAlmacenChange">
-                            <option value="">Todos los almacenes</option>
-                            <t t-foreach="state.almacenes" t-as="alm" t-key="alm.id">
-                                <option t-att-value="alm.id"><t t-esc="alm.name"/></option>
-                            </t>
-                        </select>
-                    </div>
-
-                    <!-- Ubicación -->
-                    <div class="col-6 col-md-2">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Ubicación</label>
-                        <select class="form-select form-select-sm"
-                                t-model="state.filters.ubicacion_id"
-                                t-on-change="(ev) => this.onFilterChange('ubicacion_id', ev)"
-                                t-att-disabled="!state.filters.almacen_id or state.ubicaciones.length === 0">
-                            <option value="">Todas</option>
-                            <t t-foreach="state.ubicaciones" t-as="ub" t-key="ub.id">
-                                <option t-att-value="ub.id"><t t-esc="ub.complete_name"/></option>
-                            </t>
-                        </select>
-                    </div>
-
-                    <!-- Tipo -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Tipo</label>
-                        <select class="form-select form-select-sm"
-                                t-model="state.filters.tipo"
-                                t-on-change="(ev) => this.onFilterChange('tipo', ev)">
-                            <option value="">Todos</option>
-                            <t t-foreach="state.tipos" t-as="tipo" t-key="tipo_index">
-                                <option t-att-value="tipo[0]"><t t-esc="tipo[1]"/></option>
-                            </t>
-                        </select>
-                    </div>
-
-                    <!-- Categoría -->
-                    <div class="col-6 col-md-2">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Categoría</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Escribe categoría..."
-                               t-att-value="state.filters.categoria_name"
-                               t-on-input="(ev) => this.onTextFilterChange('categoria_name', ev)"
-                               list="categorias-datalist-gal" autocomplete="off"/>
-                        <datalist id="categorias-datalist-gal">
-                            <t t-foreach="state.categorias" t-as="cat" t-key="cat.id">
-                                <option t-att-value="cat.name"/>
-                            </t>
-                        </datalist>
-                    </div>
-
-                    <!-- Botones Avanzados / Limpiar -->
-                    <div class="col-12 col-md-auto d-flex gap-2 ms-md-auto">
-                        <button class="btn btn-sm btn-light border flex-grow-1 flex-md-grow-0" 
-                                t-on-click="toggleAdvancedFilters" type="button">
-                            <i class="fa fa-sliders me-1"/>
-                            <t t-if="!state.showAdvancedFilters">Más filtros</t>
-                            <t t-else="">Menos</t>
-                        </button>
-                        <button class="btn btn-sm btn-light border"
-                                t-on-click="clearAllFilters"
-                                t-att-disabled="!hasActiveFilters()"
-                                title="Limpiar filtros" type="button">
-                            <i class="fa fa-times"/>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- FILTROS AVANZADOS -->
-                <div t-if="state.showAdvancedFilters"
-                     t-att-class="'row g-2 align-items-end mt-1' + (state.mobileFiltersOpen ? '' : ' d-none d-md-flex')">
-
-                    <!-- Espesor/Grosor -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Espesor</label>
-                        <select class="form-select form-select-sm"
-                                t-model="state.filters.grosor"
-                                t-on-change="(ev) => this.onFilterChange('grosor', ev)">
-                            <option value="">Grosor...</option>
-                            <t t-foreach="state.grosores" t-as="g" t-key="g">
-                                <option t-att-value="g"><t t-esc="g"/> cm</option>
-                            </t>
-                        </select>
-                    </div>
-
-                    <!-- Marca -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Marca</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Buscar marca..."
-                               t-att-value="state.filters.marca"
-                               t-on-input="(ev) => this.onTextFilterChange('marca', ev)"
-                               list="marcas-datalist-gal" autocomplete="off"/>
-                        <datalist id="marcas-datalist-gal">
-                            <t t-foreach="state.marcas" t-as="m" t-key="m">
-                                <option t-att-value="m"/>
-                            </t>
-                        </datalist>
-                    </div>
-
-                    <!-- Color -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Color</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Color..."
-                               t-att-value="state.filters.color"
-                               t-on-input="(ev) => this.onTextFilterChange('color', ev)"
-                               list="colores-datalist-gal" autocomplete="off"/>
-                        <datalist id="colores-datalist-gal">
-                            <t t-foreach="state.colores" t-as="c" t-key="c">
-                                <option t-att-value="c"/>
-                            </t>
-                        </datalist>
-                    </div>
-
-                    <!-- Alto mín -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Alto mín. (m)</label>
-                        <input type="number" class="form-control form-control-sm" placeholder="Ej: 1.5"
-                               t-att-value="state.filters.alto_min"
-                               t-on-input="(ev) => this.onTextFilterChange('alto_min', ev)"
-                               step="0.01" min="0"/>
-                    </div>
-
-                    <!-- Ancho mín -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Ancho mín. (m)</label>
-                        <input type="number" class="form-control form-control-sm" placeholder="Ej: 2.0"
-                               t-att-value="state.filters.ancho_min"
-                               t-on-input="(ev) => this.onTextFilterChange('ancho_min', ev)"
-                               step="0.01" min="0"/>
-                    </div>
-
-                    <!-- Lote -->
-                    <div class="col-6 col-md-2">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Lote</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Lotes sep. por coma..."
-                               t-att-value="state.filters.numero_serie"
-                               t-on-input="(ev) => this.onTextFilterChange('numero_serie', ev)"/>
-                    </div>
-
-                    <!-- Bloque -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Bloque</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Bloque..."
-                               t-att-value="state.filters.bloque"
-                               t-on-input="(ev) => this.onTextFilterChange('bloque', ev)"/>
-                    </div>
-
-                    <!-- Pedimento -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Pedimento</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Pedimento..."
-                               t-att-value="state.filters.pedimento"
-                               t-on-input="(ev) => this.onTextFilterChange('pedimento', ev)"/>
-                    </div>
-
-                    <!-- Contenedor -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Contenedor</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Contenedor..."
-                               t-att-value="state.filters.contenedor"
-                               t-on-input="(ev) => this.onTextFilterChange('contenedor', ev)"/>
-                    </div>
-
-                    <!-- Atado -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Atado</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Atado..."
-                               t-att-value="state.filters.atado"
-                               t-on-input="(ev) => this.onTextFilterChange('atado', ev)"/>
-                    </div>
-
-                    <!-- Color -->
-                    <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Color</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Color..."
-                               t-att-value="state.filters.color"
-                               t-on-input="(ev) => this.onTextFilterChange('color', ev)"
-                               list="colores-datalist-gal" autocomplete="off"/>
-                        <datalist id="colores-datalist-gal">
-                            <t t-foreach="state.colores" t-as="c" t-key="c">
-                                <option t-att-value="c"/>
-                            </t>
-                        </datalist>
-                    </div>
-                </div>
-
-                <!-- FILTRO DE PRECIOS (dentro de avanzados) -->
-                <div t-if="state.showAdvancedFilters"
-                     t-att-class="'row g-2 align-items-end mt-1' + (state.mobileFiltersOpen ? '' : ' d-none d-md-flex')">
-                    
-                    <div class="col-auto d-flex align-items-center">
-                        <span class="fw-bold text-uppercase text-muted small"><i class="fa fa-dollar me-1"/>Precio</span>
-                    </div>
-
-                    <!-- Divisa -->
-                    <div class="col-6 col-md-1">
-                        <select class="form-select form-select-sm"
-                                t-model="state.filters.price_currency"
-                                t-on-change="(ev) => this.onFilterChange('price_currency', ev)">
-                            <option value="">Divisa...</option>
-                            <option value="USD">USD</option>
-                            <option value="MXN">MXN</option>
-                        </select>
-                    </div>
-
-                    <!-- Nivel -->
-                    <div class="col-6 col-md-1">
-                        <select class="form-select form-select-sm"
-                                t-model="state.filters.price_level"
-                                t-on-change="(ev) => this.onFilterChange('price_level', ev)">
-                            <option value="">Nivel...</option>
-                            <option value="high">Alto</option>
-                            <option value="medium">Medio</option>
-                        </select>
-                    </div>
-
-                    <!-- Min -->
-                    <div class="col-6 col-md-1">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">Min</span>
-                            <input type="number" class="form-control" placeholder="0.00"
-                                   t-att-value="state.filters.price_min"
-                                   t-on-input="(ev) => this.onTextFilterChange('price_min', ev)"
-                                   step="0.01" min="0"/>
-                        </div>
-                    </div>
-
-                    <!-- Max -->
-                    <div class="col-6 col-md-1">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">Max</span>
-                            <input type="number" class="form-control" placeholder="999..."
-                                   t-att-value="state.filters.price_max"
-                                   t-on-input="(ev) => this.onTextFilterChange('price_max', ev)"
-                                   step="0.01" min="0"/>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Info resultados + contador de selección -->
-                <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top">
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Botón volver al modo bloque -->
-                        <button t-if="state.activeBlock" 
-                                class="btn btn-outline-secondary btn-sm fw-bold" 
-                                t-on-click="backToGallery">
-                            <i class="fa fa-arrow-left me-1"/> Volver
-                        </button>
-
-                        <span t-if="state.activeBlock" class="badge bg-warning text-dark">
-                            <i class="fa fa-layer-group me-1"/>
-                            <t t-esc="state.activeBlock"/>
+                <!-- ===== HERO / RESUMEN EXCLUSIVO ===== -->
+                <section class="gallery-hero">
+                    <div class="hero-inner">
+                        <span class="hero-badge">
+                            <i class="fa fa-gem"/> Selección exclusiva
                         </span>
+                        <h1 class="hero-title">
+                            Una curaduría única para <span class="client-highlight" t-esc="share.partner_id.name"/>
+                        </h1>
+                        <p class="hero-subtitle">
+                            Cada placa es irrepetible. Este catálogo fue armado específicamente para ti y no se comparte con otros clientes mientras esté activo.
+                        </p>
 
-                        <small class="text-muted">
-                            <strong><t t-esc="state.allItems.length"/></strong> elementos
-                        </small>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="form-check m-0 d-flex align-items-center">
-                            <input class="form-check-input me-1" type="checkbox" id="selectAll"
-                                   t-on-change="selectAll"
-                                   t-att-checked="state.allItems.length > 0 and state.selectedIds.size > 0"/>
-                            <label class="form-check-label small fw-bold" for="selectAll">Todo</label>
+                        <div class="hero-stats">
+                            <div class="stat-card accent">
+                                <div class="stat-label">Placas curadas</div>
+                                <div class="stat-value">
+                                    <t t-esc="total_pieces"/>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Superficie total</div>
+                                <div class="stat-value">
+                                    <t t-esc="'{:,.2f}'.format(total_area)"/>
+                                    <span class="unit">m²</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Categorías</div>
+                                <div class="stat-value">
+                                    <t t-esc="categories_count"/>
+                                </div>
+                            </div>
+                            <div t-attf-class="stat-card {{ 'urgent' if days_left &lt;= 1 else '' }}">
+                                <div class="stat-label">Vigencia</div>
+                                <div class="stat-value">
+                                    <t t-esc="days_left"/>
+                                    <span class="unit">
+                                        <t t-if="days_left == 1">día</t>
+                                        <t t-else="">días</t>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <button class="btn btn-link btn-sm text-danger text-decoration-none p-0"
-                                t-if="isSomethingSelected" t-on-click="clearSelection">
-                            <i class="fa fa-times me-1"/>Limpiar (<t t-esc="state.selectedIds.size"/>)
-                        </button>
-                        <button class="btn btn-primary btn-sm px-3 fw-bold"
-                                t-att-disabled="!isSomethingSelected"
-                                t-on-click="createLink">
-                            <i class="fa fa-share-alt me-1"/> GENERAR LINK
-                        </button>
+
+                        <div class="hero-meta">
+                            <div class="meta-item">
+                                <i class="fa fa-user-tie"/>
+                                <span>Tu ejecutivo: <strong t-esc="share.user_id.name"/></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fa fa-calendar-check"/>
+                                <span>Disponible hasta <strong t-esc="share.expiration_date.strftime('%d %b %Y')"/></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fa fa-shield-alt"/>
+                                <span>Acceso único · No compartido</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <!-- ===== GRID PRINCIPAL ===== -->
-            <div class="o_gallery_content p-3 flex-grow-1 overflow-auto bg-light"
-                 t-ref="scrollContainer"
-                 t-on-scroll="onScroll">
+                <!-- ===== RULES BAR (transparente, honesto) ===== -->
+                <section class="rules-bar">
+                    <div class="rules-inner">
+                        <div class="rule">
+                            <i class="fa fa-hand-pointer"/>
+                            <span>Toca <strong>Apartar</strong> en cada placa que te interese</span>
+                        </div>
+                        <div class="rule">
+                            <i class="fa fa-clock"/>
+                            <span>Las apartas <strong>5 días</strong> sin compromiso</span>
+                        </div>
+                        <div class="rule">
+                            <i class="fa fa-phone"/>
+                            <span>Tu ejecutivo formaliza la <strong>compra final</strong></span>
+                        </div>
+                    </div>
+                </section>
 
-                <div t-if="state.loading" class="d-flex flex-column align-items-center justify-content-center mt-5 text-muted">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-3">Procesando inventario...</p>
-                </div>
+                <!-- ===== CONTENIDO PRINCIPAL ===== -->
+                <div class="content-container" id="main-gallery-container">
 
-                <div t-else="" class="row g-2 g-md-3">
-                    <t t-foreach="state.visibleItems" t-as="item" t-key="item.type + '_' + item.key">
-                        <div class="col-6 col-md-4 col-xl-3 col-xxl-2">
-                            
-                            <t t-set="isSelected" t-value="item.type === 'block' ? this.isBlockSelected(item) : state.selectedIds.has(item.id)"/>
-                            <t t-set="coverId" t-value="item.type === 'block' ? item.cover_id : item.id"/>
+                    <t t-foreach="grouped_images" t-as="category">
+                        <div class="category-block" t-att-data-category="category">
+                            <h2 class="category-title">
+                                <span class="cat-name"><t t-esc="category"/></span>
+                                <span class="cat-count">
+                                    <t t-esc="len(grouped_images[category])"/>
+                                    <t t-if="len(grouped_images[category]) == 1"> pieza</t>
+                                    <t t-else=""> piezas</t>
+                                </span>
+                                <span class="line"/>
+                            </h2>
 
-                            <div t-attf-class="card h-100 o_gallery_card border-0 shadow-sm #{isSelected ? 'selected' : ''}">
-                                
-                                <!-- Imagen -->
-                                <div class="card-img-top position-relative bg-200 d-flex align-items-center justify-content-center"
-                                     style="height: 160px; overflow: hidden;"
-                                     t-on-click="() => this.toggleItemSelection(item)">
-                                    
-                                    <img t-att-src="'/web/image/stock.lot.image/' + coverId + '/image_small?unique=' + (item.cover_unique || '')"
-                                         loading="lazy"
-                                         class="w-100 h-100 object-fit-cover transition-zoom"/>
-                                    
-                                    <!-- Badge bloque -->
-                                    <div t-if="item.type === 'block'"
-                                         class="position-absolute top-0 end-0 m-2 badge bg-dark text-warning shadow"
-                                         style="z-index: 5;">
-                                        <i class="fa fa-layer-group me-1"/>
-                                        <t t-esc="item.ids.length"/> p.
-                                    </div>
+                            <div class="bento-grid">
+                                <t t-foreach="grouped_images[category]" t-as="img">
+                                    <div t-attf-class="bento-item #{'is-block' if img['type'] == 'block' else ''}"
+                                         t-att-data-id="img['id']"
+                                         t-att-data-type="img['type']"
+                                         t-att-data-quant-id="img.get('quant_id')"
+                                         t-att-data-lot-id="img.get('lot_id')"
+                                         t-att-data-name="img.get('product_name', img.get('name'))"
+                                         t-att-data-lot="img['lot_name']"
+                                         t-att-data-dims="img['dimensions']"
+                                         t-att-data-area="img['area']"
+                                         t-att-data-url="img['url']">
 
-                                    <!-- Overlay check -->
-                                    <div class="o_card_overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                                         t-att-class="isSelected ? 'active' : ''">
-                                        <div class="form-check">
-                                            <input class="form-check-input scale-150" type="checkbox"
-                                                   t-att-checked="isSelected" readonly="readonly"/>
+                                        <div class="bento-card">
+                                            <div class="img-container">
+                                                <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
+
+                                                <div class="selection-indicator">
+                                                    <i class="fa fa-check"/>
+                                                </div>
+
+                                                <t t-if="img['type'] == 'block'">
+                                                    <span class="block-badge">
+                                                        <i class="fa fa-layer-group"/>
+                                                        <t t-esc="img['count']"/> placas
+                                                    </span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="unique-badge">
+                                                        <i class="fa fa-gem"/>Lote único
+                                                    </span>
+                                                </t>
+
+                                                <div class="card-actions">
+                                                    <t t-if="img['type'] == 'block'">
+                                                        <button class="btn-expand open-block-btn" type="button" title="Ver contenido del bloque">
+                                                            <i class="fa fa-folder-open"/>
+                                                        </button>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <button class="btn-expand lightbox-trigger" type="button" title="Ampliar">
+                                                            <i class="fa fa-expand"/>
+                                                        </button>
+                                                    </t>
+                                                </div>
+                                            </div>
+
+                                            <div class="card-footer">
+                                                <div class="info-text">
+                                                    <span class="product-name" t-esc="img.get('product_name', img.get('name'))"/>
+                                                    <div class="meta">
+                                                        <span class="lot"><t t-esc="img['lot_name']"/></span>
+                                                        <t t-if="img['type'] != 'block' and img['dimensions']">
+                                                            <span class="sep">·</span>
+                                                            <span class="dims" t-esc="img['dimensions']"/>
+                                                        </t>
+                                                    </div>
+                                                    <span class="area-badge">
+                                                        <t t-esc="'{:,.2f}'.format(img['area'])"/> m²
+                                                    </span>
+                                                </div>
+                                                <button class="btn-add-cart" type="button">
+                                                    <i class="fa fa-plus"/>
+                                                    <span>
+                                                        <t t-if="img['type'] == 'block'">Apartar bloque</t>
+                                                        <t t-else="">Apartar</t>
+                                                    </span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Body -->
-                                <div class="card-body p-2 d-flex flex-column justify-content-between text-start" style="font-size: 0.85rem;">
-                                    <div class="mb-1 fw-bold text-dark text-truncate" t-att-title="item.product_name">
-                                        <t t-esc="item.product_name"/>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center text-muted mb-2">
-                                        <span class="text-truncate me-1" t-att-title="item.name">
-                                            <i class="fa fa-tag me-1 text-primary opacity-50"/>
-                                            <t t-esc="item.name"/>
-                                        </span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-1">
-                                        <span class="badge bg-light text-dark border">
-                                            <t t-if="item.type === 'block'">
-                                                <t t-esc="item.total_area.toFixed(2)"/> m²
-                                            </t>
-                                            <t t-else="">
-                                                <t t-esc="item.dims"/>
-                                            </t>
-                                        </span>
-                                        <button t-if="item.type === 'block'"
-                                                class="btn btn-xs btn-outline-primary"
-                                                t-on-click.stop="() => this.openBlock(item.key)">
-                                            <i class="fa fa-folder-open"/>
-                                        </button>
-                                    </div>
-                                </div>
+                                </t>
                             </div>
                         </div>
                     </t>
 
-                    <div t-if="state.visibleItems.length &lt; state.allItems.length" class="col-12 text-center py-3 text-muted">
-                        <small>Cargando más...</small>
-                    </div>
-                    <div t-if="!state.loading and state.allItems.length === 0" class="col-12 text-center mt-5 text-muted">
-                        <h4>No hay coincidencias</h4>
+                    <div t-if="not grouped_images" class="empty-state">
+                        <h1>Sin material disponible</h1>
+                        <p>En este momento no hay placas disponibles para mostrar en tu catálogo. Tu ejecutivo se pondrá en contacto contigo para coordinar.</p>
                     </div>
                 </div>
             </div>
-        </div>
-    </t>
 
-</templates>
+            <!-- ===== STICKY CART BAR (móvil) ===== -->
+            <div id="sticky-cart-bar" class="sticky-cart-bar">
+                <div class="summary">
+                    <span class="label">Tu selección</span>
+                    <span class="value">
+                        <strong id="sticky-count">0</strong> placas · <strong id="sticky-area">0.00</strong> m²
+                    </span>
+                </div>
+                <button id="sticky-open-cart" class="btn-open-cart" type="button">
+                    Ver y reservar <i class="fa fa-arrow-right"/>
+                </button>
+            </div>
+
+            <!-- ===== CONTACT FAB (WhatsApp con ejecutivo) ===== -->
+            <div class="contact-fab" t-if="share.user_id.partner_id.mobile or share.user_id.partner_id.phone">
+                <span class="fab-tooltip">
+                    Habla con <strong t-esc="share.user_id.name"/>
+                </span>
+                <a class="fab-button"
+                   t-att-href="'https://wa.me/' + (share.user_id.partner_id.mobile or share.user_id.partner_id.phone or '').replace(' ','').replace('+','').replace('-','') + '?text=Hola%20' + (share.user_id.name or '').replace(' ','%20') + ',%20vengo%20del%20cat%C3%A1logo%20' + share.name"
+                   target="_blank" rel="noopener" title="WhatsApp">
+                    <i class="fab fa-whatsapp"/>
+                </a>
+            </div>
+
+            <!-- ===== LIGHTBOX ===== -->
+            <div id="lightbox" class="lightbox">
+                <button class="close-lightbox" type="button" title="Cerrar">
+                    <i class="fa fa-times"/>
+                </button>
+                <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
+                    <img id="lightbox-img" src=""/>
+                </div>
+                <div class="lightbox-info">
+                    <div class="info-piece">
+                        <i class="fa fa-cube"/>
+                        <strong id="lb-info-name"/>
+                    </div>
+                    <div class="info-sep"/>
+                    <div class="info-piece">
+                        <i class="fa fa-tag"/>
+                        <span id="lb-info-lot"/>
+                    </div>
+                    <div class="info-sep"/>
+                    <div class="info-piece">
+                        <i class="fa fa-ruler-combined"/>
+                        <span id="lb-info-dims"/>
+                    </div>
+                    <div class="info-sep"/>
+                    <div class="info-piece">
+                        <i class="fa fa-vector-square"/>
+                        <strong id="lb-info-area"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== CART SIDEBAR ===== -->
+            <div id="cart-sidebar" class="cart-sidebar">
+                <div class="cart-header">
+                    <h3><i class="fa fa-gem"/> Tu Selección</h3>
+                    <button class="close-cart" type="button" title="Cerrar">
+                        <i class="fa fa-times"/>
+                    </button>
+                </div>
+                <div class="cart-rules-mini">
+                    <i class="fa fa-info-circle"/>
+                    <span>Apartado por <strong>5 días</strong> sin compromiso de compra</span>
+                </div>
+                <div class="cart-items" id="cart-items-container"/>
+                <div class="cart-footer">
+                    <div class="totals">
+                        <div class="row">
+                            <span>Placas seleccionadas</span>
+                            <strong id="total-plates">0</strong>
+                        </div>
+                        <div class="row highlight">
+                            <span>Superficie total</span>
+                            <strong id="total-area">0.00 m²</strong>
+                        </div>
+                    </div>
+
+                    <div class="expiry-note">
+                        <i class="fa fa-clock"/>
+                        <span>Las placas se mantendrán reservadas <strong>5 días</strong></span>
+                    </div>
+
+                    <button id="btn-confirm" class="btn-checkout" type="button" disabled="disabled">
+                        <i class="fa fa-lock"/>
+                        Confirmar Reserva
+                    </button>
+                </div>
+            </div>
+            <div id="cart-overlay" class="cart-overlay"/>
+        </t>
+    </template>
+
+    <template id="gallery_not_found">
+        <t t-call="galeria.gallery_layout_headless">
+            <div class="error-page">
+                <h1>Catálogo no encontrado</h1>
+                <p>El enlace que utilizaste no corresponde a ningún catálogo activo. Verifica con tu ejecutivo que el link sea correcto.</p>
+            </div>
+        </t>
+    </template>
+
+    <template id="gallery_expired">
+        <t t-call="galeria.gallery_layout_headless">
+            <div class="error-page">
+                <h1>Enlace Expirado</h1>
+                <p>Este catálogo exclusivo ya no está disponible. Contacta a tu ejecutivo para recibir una selección actualizada.</p>
+            </div>
+        </t>
+    </template>
+</odoo>

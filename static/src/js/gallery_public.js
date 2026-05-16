@@ -18,13 +18,9 @@ class GalleryApp {
         this.config = window.galleryRawData || {};
         this.cartKey = 'stone_gallery_cart_' + (this.config.token || 'default');
 
-        // Debug: verificar que los datos llegaron correctamente
         const blockCount = this.config.blocks_details ? Object.keys(this.config.blocks_details).length : 0;
         const initialViewCount = this.config.initial_view ? Object.keys(this.config.initial_view).length : 0;
-        console.log('[Gallery] Config cargado. Categorías:', initialViewCount, '| Bloques con detalle:', blockCount);
-        if (blockCount > 0) {
-            console.log('[Gallery] IDs de bloques disponibles:', Object.keys(this.config.blocks_details));
-        }
+        console.log('[Gallery] Categorías:', initialViewCount, '| Bloques agrupados:', blockCount, '| Placas totales:', this.config.total_pieces);
 
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
@@ -39,7 +35,9 @@ class GalleryApp {
 
         this.updateCartUI();
         this.updateButtonsState();
+        this.updateSelectionStates();
         this.bindEvents();
+        this.animateOnScroll();
     }
 
     bindEvents() {
@@ -70,7 +68,7 @@ class GalleryApp {
                 return;
             }
 
-            // D. Clic en imagen
+            // D. Click directo en card (no-block abre lightbox, block abre vista)
             const imgContainer = e.target.closest('.img-container');
             const isButtonInside = e.target.closest('button');
             if (imgContainer && !isButtonInside) {
@@ -101,7 +99,10 @@ class GalleryApp {
             }
 
             // Toggle carrito
-            if (e.target.closest('#cart-toggle') || e.target.closest('.close-cart') || e.target.closest('#cart-overlay')) {
+            if (e.target.closest('#cart-toggle') ||
+                e.target.closest('#sticky-open-cart') ||
+                e.target.closest('.close-cart') ||
+                e.target.closest('#cart-overlay')) {
                 e.preventDefault();
                 this.toggleCart();
                 return;
@@ -119,29 +120,35 @@ class GalleryApp {
                 this.closeLightbox();
             }
         });
+
+        // ESC para cerrar lightbox/carrito
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('lightbox')?.classList.contains('active')) {
+                    this.closeLightbox();
+                } else if (document.getElementById('cart-sidebar')?.classList.contains('open')) {
+                    this.toggleCart();
+                }
+            }
+        });
     }
 
     // --- VISTAS ---
 
     openBlockView(blockId) {
-        console.log('[Gallery] Intentando abrir bloque:', blockId);
-        console.log('[Gallery] blocks_details disponible:', this.config.blocks_details ? 'SÍ' : 'NO');
-
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
 
         if (!details || details.length === 0) {
-            console.error('[Gallery] No se encontraron detalles para el bloque:', blockId);
-            console.log('[Gallery] Claves disponibles en blocks_details:', this.config.blocks_details ? Object.keys(this.config.blocks_details) : 'vacío');
+            this.showToast('No se pudo cargar el bloque', 'error');
             return;
         }
-
-        console.log('[Gallery] Abriendo bloque con', details.length, 'placas');
 
         const container = document.getElementById('main-gallery-container');
         let html = `
             <div class="category-block">
                 <h2 class="category-title text-primary">
-                    <i class="fa fa-layer-group me-2"></i> Contenido del Bloque
+                    <span class="cat-name">Contenido del Bloque</span>
+                    <span class="cat-count">${details.length} placas</span>
                     <span class="line"></span>
                 </h2>
                 <div class="bento-grid">
@@ -151,13 +158,14 @@ class GalleryApp {
         html += `</div></div>`;
 
         container.innerHTML = html;
-        container.scrollIntoView({ behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const backBtn = document.getElementById('btn-back-gallery');
         if (backBtn) backBtn.style.display = 'flex';
 
         this.currentView = 'block';
         this.updateButtonsState();
+        this.updateSelectionStates();
     }
 
     restoreMainView() {
@@ -169,6 +177,8 @@ class GalleryApp {
 
         this.currentView = 'main';
         this.updateButtonsState();
+        this.updateSelectionStates();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     renderCardHtml(img) {
@@ -187,23 +197,27 @@ class GalleryApp {
                 <div class="bento-card">
                     <div class="img-container">
                         <img src="${img.url}" loading="lazy" alt="${img.lot_name}"/>
+                        <div class="selection-indicator"><i class="fa fa-check"></i></div>
                         <div class="card-actions">
-                            <button class="btn-expand lightbox-trigger" type="button">
+                            <button class="btn-expand lightbox-trigger" type="button" title="Ampliar">
                                 <i class="fa fa-expand"></i>
                             </button>
                         </div>
+                        <span class="unique-badge"><i class="fa fa-gem"></i>Lote único</span>
                     </div>
                     <div class="card-footer">
                         <div class="info-text">
                             <span class="product-name">${img.name}</span>
                             <div class="meta">
                                 <span class="lot">${img.lot_name}</span>
-                                <span class="sep">•</span>
+                                <span class="sep">·</span>
                                 <span class="dims">${img.dimensions}</span>
                             </div>
                             <span class="area-badge">${areaVal} m²</span>
                         </div>
-                        <button class="btn-add-cart" type="button">Apartar</button>
+                        <button class="btn-add-cart" type="button">
+                            <i class="fa fa-plus"></i><span>Apartar</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -228,20 +242,25 @@ class GalleryApp {
 
             if (inCartCount === details.length) {
                 allIds.forEach(childId => this.removeFromCart(childId, false));
+                this.showToast(`Bloque liberado (${details.length} placas)`, 'warning');
             } else {
+                let added = 0;
                 details.forEach(child => {
                     if (!this.cart.find(c => String(c.id) === String(child.id))) {
                         this.pushToCart({
                             id: child.id,
                             quant_id: child.quant_id,
+                            lot_id: child.lot_id,
                             name: child.name,
                             lot_name: child.lot_name,
                             dims: child.dimensions,
                             area: parseFloat(child.area),
                             url: child.url
                         });
+                        added++;
                     }
                 });
+                this.showToast(`+${added} placas apartadas del bloque`, 'success');
             }
             this.saveCart();
 
@@ -253,6 +272,7 @@ class GalleryApp {
                 this.pushToCart({
                     id: id,
                     quant_id: itemEl.dataset.quantId,
+                    lot_id: itemEl.dataset.lotId,
                     name: itemEl.dataset.name,
                     lot_name: itemEl.dataset.lot,
                     dims: itemEl.dataset.dims,
@@ -260,11 +280,13 @@ class GalleryApp {
                     url: itemEl.dataset.url
                 });
                 this.saveCart();
+                this.showToast('Placa apartada', 'success');
             }
         }
 
         this.updateCartUI();
         this.updateButtonsState();
+        this.updateSelectionStates();
     }
 
     pushToCart(item) { this.cart.push(item); }
@@ -275,6 +297,7 @@ class GalleryApp {
             this.saveCart();
             this.updateCartUI();
             this.updateButtonsState();
+            this.updateSelectionStates();
         }
     }
 
@@ -293,6 +316,21 @@ class GalleryApp {
             this.cart.length > 0
                 ? cartToggleBtn.classList.add('active-cart')
                 : cartToggleBtn.classList.remove('active-cart');
+        }
+
+        // Sticky bar móvil
+        const stickyBar = document.getElementById('sticky-cart-bar');
+        if (stickyBar) {
+            if (this.cart.length > 0) {
+                stickyBar.classList.add('visible');
+                const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0);
+                const sCount = document.getElementById('sticky-count');
+                const sArea = document.getElementById('sticky-area');
+                if (sCount) sCount.textContent = this.cart.length;
+                if (sArea) sArea.textContent = totalArea.toFixed(2);
+            } else {
+                stickyBar.classList.remove('visible');
+            }
         }
 
         document.querySelectorAll('.bento-item').forEach(el => {
@@ -314,13 +352,39 @@ class GalleryApp {
                 isSelected = this.cart.some(i => String(i.id) === String(id));
             }
 
+            const labelSpan = btn.querySelector('span');
+            const icon = btn.querySelector('i');
+
             if (isSelected) {
                 btn.classList.add('in-cart');
-                btn.textContent = 'Apartado';
+                if (labelSpan) labelSpan.textContent = type === 'block' ? 'Bloque apartado' : 'Apartado';
+                if (icon) icon.className = 'fa fa-check';
             } else {
                 btn.classList.remove('in-cart');
-                btn.textContent = 'Apartar';
+                if (labelSpan) labelSpan.textContent = type === 'block' ? 'Apartar bloque' : 'Apartar';
+                if (icon) icon.className = 'fa fa-plus';
             }
+        });
+    }
+
+    updateSelectionStates() {
+        document.querySelectorAll('.bento-item').forEach(el => {
+            const type = el.dataset.type;
+            const id = el.dataset.id;
+            let isSelected = false;
+
+            if (type === 'block') {
+                const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
+                if (details && details.length > 0) {
+                    const allIds = details.map(d => String(d.id));
+                    const countInCart = this.cart.filter(c => allIds.includes(String(c.id))).length;
+                    isSelected = (countInCart === details.length);
+                }
+            } else {
+                isSelected = this.cart.some(i => String(i.id) === String(id));
+            }
+
+            el.classList.toggle('is-selected', isSelected);
         });
     }
 
@@ -332,23 +396,26 @@ class GalleryApp {
 
         if (this.cart.length === 0) {
             container.innerHTML = `
-                <div style="text-align:center;color:#666;padding:40px 20px;">
-                    <i class="fa fa-shopping-basket fa-3x mb-3" style="opacity:0.3;"></i>
-                    <p>Tu selección está vacía.</p>
+                <div class="cart-empty">
+                    <i class="fa fa-gem"></i>
+                    <p>Tu selección está vacía</p>
+                    <small>Apartar placas no compromete su compra</small>
                 </div>`;
         } else {
             this.cart.forEach(item => {
-                totalArea += item.area;
+                totalArea += item.area || 0;
                 const div = document.createElement('div');
                 div.className = 'cart-item';
                 div.innerHTML = `
                     <img src="${item.url}" alt="Thumbnail"/>
                     <div class="item-details">
                         <h4>${item.name}</h4>
-                        <p>Lote: <strong>${item.lot_name}</strong></p>
-                        <p class="small">${item.dims} | ${item.area.toFixed(2)} m²</p>
+                        <div class="lot-pill">${item.lot_name}</div>
+                        <div class="item-meta">
+                            ${item.dims ? item.dims + ' · ' : ''}<span class="area">${(item.area || 0).toFixed(2)} m²</span>
+                        </div>
                     </div>
-                    <button class="btn-remove" type="button" data-id="${item.id}">
+                    <button class="btn-remove" type="button" data-id="${item.id}" title="Quitar">
                         <i class="fa fa-times"></i>
                     </button>
                 `;
@@ -364,8 +431,6 @@ class GalleryApp {
         const confirmBtn = document.getElementById('btn-confirm');
         if (confirmBtn) {
             confirmBtn.disabled = this.cart.length === 0;
-            confirmBtn.style.opacity = this.cart.length === 0 ? '0.5' : '1';
-            confirmBtn.style.cursor = this.cart.length === 0 ? 'not-allowed' : 'pointer';
         }
     }
 
@@ -375,6 +440,7 @@ class GalleryApp {
         if (sidebar && overlay) {
             sidebar.classList.toggle('open');
             overlay.classList.toggle('open');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
         }
     }
 
@@ -384,6 +450,18 @@ class GalleryApp {
         const imgUrl = itemEl.dataset.url;
         const lightbox = document.getElementById('lightbox');
         const img = document.getElementById('lightbox-img');
+
+        const infoName = document.getElementById('lb-info-name');
+        const infoLot = document.getElementById('lb-info-lot');
+        const infoDims = document.getElementById('lb-info-dims');
+        const infoArea = document.getElementById('lb-info-area');
+
+        if (infoName) infoName.textContent = itemEl.dataset.name || '';
+        if (infoLot) infoLot.textContent = itemEl.dataset.lot || '';
+        if (infoDims) infoDims.textContent = itemEl.dataset.dims || '';
+        const areaVal = parseFloat(itemEl.dataset.area || 0).toFixed(2);
+        if (infoArea) infoArea.textContent = areaVal + ' m²';
+
         if (lightbox && img) {
             img.style.transform = 'scale(1)';
             img.src = imgUrl;
@@ -416,7 +494,36 @@ class GalleryApp {
         const x = (e.clientX - rect.left) / rect.width * 100;
         const y = (e.clientY - rect.top) / rect.height * 100;
         img.style.transformOrigin = `${x}% ${y}%`;
-        img.style.transform = 'scale(2.5)';
+        img.style.transform = 'scale(2.4)';
+    }
+
+    showToast(message, type = 'info') {
+        let toast = document.getElementById('gallery-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'gallery-toast';
+            toast.className = 'gallery-toast';
+            document.body.appendChild(toast);
+        }
+        const iconMap = {
+            success: 'fa-check-circle',
+            warning: 'fa-exclamation-triangle',
+            error: 'fa-times-circle',
+            info: 'fa-info-circle'
+        };
+        toast.className = `gallery-toast ${type}`;
+        toast.innerHTML = `<i class="fa ${iconMap[type] || iconMap.info}"></i><span>${message}</span>`;
+
+        clearTimeout(this._toastTimer);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        this._toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    animateOnScroll() {
+        const items = document.querySelectorAll('.bento-item');
+        items.forEach((el, idx) => {
+            el.style.animationDelay = `${Math.min(idx * 30, 600)}ms`;
+        });
     }
 
     async confirmReservation() {
@@ -428,56 +535,71 @@ class GalleryApp {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
 
+        const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0).toFixed(2);
+        const totalCount = this.cart.length;
+
         const disclaimer = document.createElement('div');
         disclaimer.id = 'reservation-disclaimer';
         disclaimer.style.cssText = `
-            position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.88);z-index:9999;
+            position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;
             display:flex;align-items:center;justify-content:center;
             padding:20px;box-sizing:border-box;animation:fadeInOverlay 0.25s ease;
         `;
         disclaimer.innerHTML = `
             <style>
                 @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
-                @keyframes slideUpModal { from{opacity:0;transform:translateY(30px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-                #disclaimer-box { animation:slideUpModal 0.3s ease forwards; }
-                #disclaimer-confirm:hover { background:#e6c44a!important; box-shadow:0 4px 20px rgba(212,175,55,0.5); transform:translateY(-1px); }
-                #disclaimer-cancel:hover { background:rgba(255,255,255,0.07)!important; border-color:#888!important; color:#fff!important; }
+                @keyframes slideUpModal { from{opacity:0;transform:translateY(30px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+                #disclaimer-box { animation:slideUpModal 0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
+                #disclaimer-confirm:hover { background:#e8c468!important; box-shadow:0 8px 28px rgba(212,175,55,0.55); transform:translateY(-1px); }
+                #disclaimer-cancel:hover { background:rgba(255,255,255,0.06)!important; border-color:#777!important; color:#fff!important; }
             </style>
-            <div id="disclaimer-box" style="background:#1a1a1a;border:2px solid #d4af37;border-radius:14px;max-width:500px;width:100%;overflow:hidden;box-shadow:0 0 60px rgba(212,175,55,0.25),0 20px 60px rgba(0,0,0,0.6);">
-                <div style="background:linear-gradient(135deg,#c9a227 0%,#e6c84a 50%,#c9a227 100%);padding:22px 28px 18px;text-align:center;">
-                    <div style="font-size:2.8rem;line-height:1;margin-bottom:8px;">⏳</div>
-                    <h2 style="margin:0;color:#1a1a00;font-size:1.15rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">Aviso Importante</h2>
-                    <p style="margin:4px 0 0;color:rgba(0,0,0,0.6);font-size:0.82rem;font-weight:600;">Condiciones del período de apartado</p>
+            <div id="disclaimer-box" style="background:#0f0f0f;border:1px solid rgba(212,175,55,0.3);border-radius:18px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 0 80px rgba(212,175,55,0.2),0 24px 64px rgba(0,0,0,0.7);">
+                <div style="background:linear-gradient(135deg,#a8801e 0%,#d4af37 50%,#a8801e 100%);padding:24px 28px 20px;text-align:center;position:relative;">
+                    <div style="font-size:2.6rem;line-height:1;margin-bottom:6px;">⏳</div>
+                    <h2 style="margin:0;color:#0f0f0f;font-size:1.05rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;">Confirma tu Reserva</h2>
+                    <p style="margin:6px 0 0;color:rgba(0,0,0,0.65);font-size:0.78rem;font-weight:600;letter-spacing:0.5px;">Lee las condiciones antes de continuar</p>
                 </div>
-                <div style="padding:24px 28px 28px;">
-                    <div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.25);border-left:5px solid #d4af37;border-radius:0 10px 10px 0;padding:16px 20px;margin-bottom:18px;">
-                        <p style="margin:0 0 10px;color:#fff;font-size:1.05rem;font-weight:700;line-height:1.5;">
-                            Las placas seleccionadas quedarán
-                            <span style="color:#d4af37;white-space:nowrap;">apartadas por 5 días calendario.</span>
+
+                <div style="padding:22px 28px 24px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+                        <div style="background:rgba(255,255,255,0.03);border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;text-align:center;">
+                            <div style="font-size:0.66rem;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Placas</div>
+                            <div style="font-size:1.5rem;color:#fff;font-weight:800;line-height:1;">${totalCount}</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.03);border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;text-align:center;">
+                            <div style="font-size:0.66rem;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Total m²</div>
+                            <div style="font-size:1.5rem;color:#d4af37;font-weight:800;line-height:1;">${totalArea}</div>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.25);border-left:4px solid #d4af37;border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:14px;">
+                        <p style="margin:0 0 8px;color:#fff;font-size:0.95rem;font-weight:700;line-height:1.5;">
+                            Apartado por <span style="color:#d4af37;">5 días calendario</span>
                         </p>
-                        <p style="margin:0;color:#b0b0b0;font-size:0.87rem;line-height:1.65;">
-                            Vencimiento estimado: <strong style="color:#e0e0e0;">${expiryStr}</strong>
+                        <p style="margin:0;color:#b0b0b0;font-size:0.82rem;line-height:1.6;">
+                            Vencimiento: <strong style="color:#e0e0e0;">${expiryStr}</strong>
                         </p>
                     </div>
-                    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.25);border-radius:10px;padding:14px 16px;margin-bottom:18px;">
-                        <span style="font-size:1.4rem;flex-shrink:0;line-height:1;">⚠️</span>
-                        <p style="margin:0;color:#c8a0a0;font-size:0.85rem;line-height:1.65;">
-                            Al vencimiento, si no se ha formalizado la compra, <strong style="color:#e0a0a0;">las placas quedarán disponibles automáticamente</strong> para otros clientes, sin previo aviso.
+
+                    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.22);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+                        <i class="fa fa-exclamation-triangle" style="color:#ef4444;font-size:0.95rem;margin-top:2px;flex-shrink:0;"></i>
+                        <p style="margin:0;color:#d8b0b0;font-size:0.8rem;line-height:1.6;">
+                            Al vencer, las placas se <strong style="color:#fca5a5;">liberan automáticamente</strong> sin previo aviso.
                         </p>
                     </div>
-                    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,0.03);border-radius:10px;padding:12px 16px;margin-bottom:22px;">
-                        <span style="font-size:1.2rem;flex-shrink:0;line-height:1;">📞</span>
-                        <p style="margin:0;color:#888;font-size:0.82rem;line-height:1.65;">
+
+                    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,0.02);border-radius:10px;padding:11px 14px;margin-bottom:20px;">
+                        <i class="fa fa-phone" style="color:#888;font-size:0.9rem;margin-top:2px;flex-shrink:0;"></i>
+                        <p style="margin:0;color:#888;font-size:0.78rem;line-height:1.6;">
                             Para formalizar tu compra, contacta a tu ejecutivo con la referencia que recibirás al confirmar.
                         </p>
                     </div>
-                    <p style="text-align:center;font-size:0.76rem;color:#555;margin:0 0 20px;line-height:1.5;">
-                        Al presionar <strong style="color:#888;">"Sí, Apartar Ahora"</strong> confirmas haber leído y aceptado las condiciones.
-                    </p>
-                    <div style="display:flex;gap:12px;">
-                        <button id="disclaimer-cancel" type="button" style="flex:1;padding:13px 10px;background:transparent;border:1px solid #444;color:#888;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;transition:all 0.2s;">Cancelar</button>
-                        <button id="disclaimer-confirm" type="button" style="flex:2;padding:13px 10px;background:#d4af37;border:none;color:#000;border-radius:8px;cursor:pointer;font-size:0.95rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;transition:all 0.25s;">✓ Sí, Apartar Ahora</button>
+
+                    <div style="display:flex;gap:10px;">
+                        <button id="disclaimer-cancel" type="button" style="flex:1;padding:13px 10px;background:transparent;border:1px solid #3a3a3a;color:#999;border-radius:10px;cursor:pointer;font-size:0.88rem;font-weight:700;transition:all 0.2s;">Cancelar</button>
+                        <button id="disclaimer-confirm" type="button" style="flex:2;padding:13px 10px;background:linear-gradient(135deg,#a8801e,#d4af37);border:none;color:#0f0f0f;border-radius:10px;cursor:pointer;font-size:0.92rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;transition:all 0.25s;box-shadow:0 6px 18px rgba(212,175,55,0.3);">
+                            <i class="fa fa-check me-2"></i> Sí, Apartar Ahora
+                        </button>
                     </div>
                 </div>
             </div>
@@ -498,8 +620,8 @@ class GalleryApp {
         if (!userConfirmed) return;
 
         const btn = document.getElementById('btn-confirm');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = 'Procesando...';
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
         btn.disabled = true;
 
         try {
@@ -515,24 +637,53 @@ class GalleryApp {
             });
             const result = await response.json();
             if (result.result && result.result.success) {
-                alert('✅ ' + result.result.message + '\n\nReferencia: ' + result.result.order_name);
+                this.showSuccessModal(result.result.order_name);
                 this.cart = [];
                 this.saveCart();
                 this.updateCartUI();
-                this.toggleCart();
-                window.location.reload();
+                setTimeout(() => window.location.reload(), 4500);
             } else {
                 const msg = result.error
                     ? result.error.data.message
                     : (result.result ? result.result.message : 'Error desconocido');
-                alert('⚠️ No se pudo reservar:\n' + msg);
+                this.showToast('No se pudo reservar: ' + msg, 'error');
+                if (btn) { btn.innerHTML = originalHTML; btn.disabled = false; }
             }
         } catch (error) {
             console.error(error);
-            alert('Error de conexión.');
-        } finally {
-            if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+            this.showToast('Error de conexión', 'error');
+            if (btn) { btn.innerHTML = originalHTML; btn.disabled = false; }
         }
+    }
+
+    showSuccessModal(orderName) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;
+            display:flex;align-items:center;justify-content:center;padding:20px;
+            animation:fadeInOverlay 0.3s ease;
+        `;
+        modal.innerHTML = `
+            <style>
+                @keyframes successPop { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+                @keyframes checkDraw { from{stroke-dashoffset:60} to{stroke-dashoffset:0} }
+            </style>
+            <div style="background:#0f0f0f;border:1px solid rgba(212,175,55,0.3);border-radius:20px;max-width:460px;width:100%;padding:42px 32px 36px;text-align:center;box-shadow:0 0 100px rgba(212,175,55,0.25);animation:successPop 0.55s cubic-bezier(0.16,1,0.3,1);">
+                <div style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);margin:0 auto 22px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(34,197,94,0.4);">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" style="stroke-dasharray:60;animation:checkDraw 0.6s 0.2s ease forwards;stroke-dashoffset:60;"/>
+                    </svg>
+                </div>
+                <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:2rem;color:#fff;margin:0 0 8px;font-weight:500;">¡Reserva Confirmada!</h2>
+                <p style="color:#b0b0b0;margin:0 0 22px;font-size:0.9rem;line-height:1.55;">Tus placas quedaron apartadas exclusivamente para ti.</p>
+                <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:10px;padding:14px;margin-bottom:18px;">
+                    <div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">Tu referencia</div>
+                    <div style="font-size:1.3rem;color:#d4af37;font-weight:800;letter-spacing:1px;">${orderName}</div>
+                </div>
+                <p style="color:#777;font-size:0.78rem;margin:0;line-height:1.55;">Comparte esta referencia con tu ejecutivo para formalizar tu compra.</p>
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
 }
 

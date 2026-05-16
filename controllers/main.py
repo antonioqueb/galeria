@@ -7,10 +7,18 @@ from collections import defaultdict
 
 from markupsafe import Markup
 
-from odoo import http
+from odoo import http, fields
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
+
+# === Reglas de agrupación visual ===
+# Un bloque (lotes con mismo x_bloque) se muestra agrupado solo si:
+#   1. Tiene 5 o más placas (más de 4)
+#   2. El producto al que pertenece tiene 4 o más bloques que cumplen (1)
+# De lo contrario, las placas se muestran individuales (evita cards solitarios).
+THRESHOLD_BLOCK_SIZE = 5
+THRESHOLD_PRODUCT_BLOCKS = 4
 
 
 class GalleryController(http.Controller):
@@ -29,8 +37,10 @@ class GalleryController(http.Controller):
 
         StockQuant = request.env['stock.quant'].sudo().with_company(share.company_id)
 
-        # Estructura temporal: temp_storage[categoria][nombre_bloque] = [items...]
-        temp_storage = defaultdict(lambda: defaultdict(list))
+        # -------------------------------------------------------------
+        # 1. Recolección de items válidos (con stock real y sin holds)
+        # -------------------------------------------------------------
+        valid_items = []
 
         for image in share.image_ids:
             lot = image.lot_id
@@ -49,103 +59,179 @@ class GalleryController(http.Controller):
             if not quant:
                 continue
 
-            # Calcular área
-            area = 0.0
-            if hasattr(lot, 'x_alto') and hasattr(lot, 'x_ancho'):
-                area = (lot.x_alto or 0) * (lot.x_ancho or 0)
-            if area <= 0:
-                area = quant.quantity
+            alto = getattr(lot, 'x_alto', 0.0) or 0.0
+            ancho = getattr(lot, 'x_ancho', 0.0) or 0.0
+            area = alto * ancho if alto and ancho else quant.quantity
+            area = round(area, 2)
 
             categ = lot.product_id.categ_id
             categ_name = categ.name if categ else "General"
 
-            # Manejo robusto de x_bloque
             raw_bloque = getattr(lot, 'x_bloque', None)
             if raw_bloque and str(raw_bloque).strip() and str(raw_bloque).strip() != '0':
                 block_name = str(raw_bloque).strip()
             else:
-                block_name = "NO_BLOCK"
+                block_name = None  # placa solitaria, sin bloque
 
-            alto = getattr(lot, 'x_alto', 0.0) or 0.0
-            ancho = getattr(lot, 'x_ancho', 0.0) or 0.0
-
-            item_data = {
-                'id': image.id,
+            valid_items.append({
+                'image_id': image.id,
                 'quant_id': quant.id,
                 'lot_id': lot.id,
-                'name': lot.product_id.name,
                 'lot_name': lot.name,
+                'product_id': lot.product_id.id,
+                'product_name': lot.product_id.name,
+                'categ_name': categ_name,
                 'block_name': block_name,
+                'alto': alto,
+                'ancho': ancho,
+                'area': area,
                 'dimensions': "{:.2f} x {:.2f} m".format(alto, ancho) if alto else "",
-                'area': round(area, 2),
                 'url': "/gallery/image/{}/{}".format(token, image.id),
                 'write_date': str(image.write_date),
-                'type': 'single',
-                'is_large': False,
-            }
+            })
 
-            temp_storage[categ_name][block_name].append(item_data)
+        # -------------------------------------------------------------
+        # 2. Agrupar items por (producto, bloque)
+        # -------------------------------------------------------------
+        block_map = defaultdict(list)
+        loose_items = []  # placas sin bloque, van directo a individuales
 
-        # Agrupar si hay 2 o más placas con bloque real
-        BLOCK_THRESHOLD = 2
+        for item in valid_items:
+            if item['block_name']:
+                block_map[(item['product_id'], item['block_name'])].append(item)
+            else:
+                loose_items.append(item)
 
+        # -------------------------------------------------------------
+        # 3. Contar bloques "grandes" (>= THRESHOLD_BLOCK_SIZE) por producto
+        # -------------------------------------------------------------
+        big_blocks_per_product = defaultdict(int)
+        for (prod_id, _block), items in block_map.items():
+            if len(items) >= THRESHOLD_BLOCK_SIZE:
+                big_blocks_per_product[prod_id] += 1
+
+        eligible_products = {
+            pid for pid, count in big_blocks_per_product.items()
+            if count >= THRESHOLD_PRODUCT_BLOCKS
+        }
+
+        # -------------------------------------------------------------
+        # 4. Construir vista final agrupada por categoría
+        # -------------------------------------------------------------
         final_grouped = defaultdict(list)
         blocks_data = {}
 
-        for categ, blocks in temp_storage.items():
-            for block_name, items in blocks.items():
-                if block_name != "NO_BLOCK" and len(items) >= BLOCK_THRESHOLD:
-                    total_area = sum(i['area'] for i in items)
-                    first_img = items[0]
+        def build_single(i):
+            return {
+                'id': i['image_id'],
+                'quant_id': i['quant_id'],
+                'lot_id': i['lot_id'],
+                'name': i['product_name'],
+                'product_name': i['product_name'],
+                'lot_name': i['lot_name'],
+                'block_name': i['block_name'] or '',
+                'dimensions': i['dimensions'],
+                'area': i['area'],
+                'url': i['url'],
+                'write_date': i['write_date'],
+                'type': 'single',
+            }
 
-                    safe_block_name = re.sub(r'[^a-zA-Z0-9]', '_', block_name)
-                    block_id = "BLK_{}_{}".format(safe_block_name, first_img['id'])
+        # 4a. Bloques agrupables vs expandibles
+        for (prod_id, block_name), items in block_map.items():
+            first = items[0]
+            categ = first['categ_name']
 
-                    block_item = {
-                        'id': block_id,
-                        'type': 'block',
-                        'name': "Bloque {}".format(block_name),
-                        'lot_name': "{} Placas".format(len(items)),
-                        'product_name': first_img['name'],
-                        'dimensions': "Varias",
-                        'area': round(total_area, 2),
-                        'url': first_img['url'],
-                        'is_large': False,
-                        'child_ids': [i['id'] for i in items],
-                        'count': len(items),
-                    }
+            should_group = (
+                prod_id in eligible_products
+                and len(items) >= THRESHOLD_BLOCK_SIZE
+            )
 
-                    final_grouped[categ].append(block_item)
-                    blocks_data[block_id] = list(items)
-                else:
-                    for item in items:
-                        final_grouped[categ].append(item)
+            if should_group:
+                total_area = round(sum(i['area'] for i in items), 2)
+                safe_block = re.sub(r'[^a-zA-Z0-9]', '_', block_name)
+                block_id = "BLK_{}_{}".format(safe_block, first['image_id'])
+
+                children = [build_single(i) for i in items]
+
+                block_item = {
+                    'id': block_id,
+                    'type': 'block',
+                    'name': "Bloque {}".format(block_name),
+                    'product_name': first['product_name'],
+                    'lot_name': "{} placas".format(len(items)),
+                    'dimensions': 'Variadas',
+                    'area': total_area,
+                    'url': first['url'],
+                    'child_ids': [c['id'] for c in children],
+                    'count': len(items),
+                    'block_name': block_name,
+                }
+                final_grouped[categ].append(block_item)
+                blocks_data[block_id] = children
+            else:
+                # expandir a singles
+                for i in items:
+                    final_grouped[i['categ_name']].append(build_single(i))
+
+        # 4b. Items sin bloque (sueltos)
+        for i in loose_items:
+            final_grouped[i['categ_name']].append(build_single(i))
+
+        # -------------------------------------------------------------
+        # 5. Stats globales (para hero / sesgo de escasez REAL)
+        # -------------------------------------------------------------
+        total_pieces = len(valid_items)
+        total_area = round(sum(i['area'] for i in valid_items), 2)
+        categories_count = len(final_grouped)
+
+        now = fields.Datetime.now()
+        days_left = 0
+        if share.expiration_date:
+            delta = share.expiration_date - now
+            days_left = max(0, delta.days)
+
+        # Ordenar items dentro de cada categoría: bloques primero, luego singles por área desc
+        for categ in final_grouped:
+            final_grouped[categ].sort(key=lambda x: (
+                0 if x['type'] == 'block' else 1,
+                -float(x.get('area') or 0)
+            ))
+
+        # Ordenar categorías por cantidad de items desc
+        ordered_categories = dict(sorted(
+            final_grouped.items(),
+            key=lambda kv: -len(kv[1])
+        ))
 
         _logger.info(
-            "[Gallery] Token=%s | Categorías=%d | Bloques agrupados=%d | Singles=%d",
-            token,
-            len(final_grouped),
-            len(blocks_data),
-            sum(
-                1
-                for cat_items in final_grouped.values()
-                for i in cat_items
-                if i['type'] == 'single'
-            )
+            "[Gallery] Token=%s | Categorías=%d | Bloques=%d | Singles=%d | Total=%d placas",
+            token, categories_count, len(blocks_data),
+            sum(1 for cat in ordered_categories.values() for i in cat if i['type'] == 'single'),
+            total_pieces,
         )
 
         js_gallery_data = {
-            'initial_view': dict(final_grouped),
+            'initial_view': ordered_categories,
             'blocks_details': blocks_data,
             'token': token,
+            'total_pieces': total_pieces,
+            'total_area': total_area,
+            'days_left': days_left,
+            'partner_name': share.partner_id.name or '',
+            'salesperson': share.user_id.name or '',
         }
 
         values = {
             'share': share,
-            'grouped_images': dict(final_grouped),
+            'grouped_images': ordered_categories,
             'json_data': Markup(json.dumps(js_gallery_data)),
             'company': share.company_id,
             'token': token,
+            'total_pieces': total_pieces,
+            'total_area': total_area,
+            'categories_count': categories_count,
+            'days_left': days_left,
         }
         return request.render('galeria.gallery_public_view', values)
 
