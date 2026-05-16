@@ -1,51 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Layout Base Independiente (Dark Mode Premium) -->
+
+    <!-- =========================================================
+         Layout Base Independiente
+         ========================================================= -->
     <template id="gallery_layout_headless">
         &lt;!DOCTYPE html&gt;
         <html lang="es">
             <head>
                 <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
-                <meta name="theme-color" content="#0a0a0a"/>
-                <title t-esc="title or 'Catálogo Exclusivo'"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+                <title t-esc="title or 'Galería de Placas'"/>
 
-                <link rel="preconnect" href="https://fonts.googleapis.com"/>
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500;1,600&amp;display=swap" rel="stylesheet"/>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Cormorant+Garamond:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
 
                 <style>
                     body {
-                        margin: 0; padding: 0;
-                        background-color: #0a0a0a;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #121212;
                         color: #e0e0e0;
-                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                         overflow-x: hidden;
-                        -webkit-font-smoothing: antialiased;
-                        -moz-osx-font-smoothing: grayscale;
                     }
-                    a { text-decoration: none; }
-                    * { -webkit-tap-highlight-color: transparent; }
-                    img { display: block; max-width: 100%; }
-                    button { font-family: inherit; }
+                    a {
+                        text-decoration: none;
+                    }
+                    * {
+                        -webkit-tap-highlight-color: transparent;
+                    }
+                    img {
+                        display: block;
+                        max-width: 100%;
+                    }
                 </style>
             </head>
+
             <body>
                 <main>
                     <t t-out="0"/>
                 </main>
+
                 <t t-call-assets="web.assets_frontend" t-css="false"/>
             </body>
         </html>
     </template>
 
-    <!-- Vista Principal -->
+
+    <!-- =========================================================
+         Vista Principal Pública
+         ========================================================= -->
     <template id="gallery_public_view">
         <t t-call="galeria.gallery_layout_headless">
-            <t t-set="title">Catálogo Exclusivo · <t t-esc="share.partner_id.name"/></t>
+            <t t-set="title" t-value="share.name"/>
 
             <!-- DATA ISLAND -->
             <script>
@@ -54,136 +64,168 @@
 
             <div class="gallery-wrapper">
 
-                <!-- ===== HEADER FIJO ===== -->
+                <!-- =================================================
+                     HEADER
+                     ================================================= -->
                 <header class="gallery-header">
                     <div class="header-content">
+
                         <div class="brand-area">
-                            <button id="btn-back-gallery" class="btn-back" style="display: none;">
-                                <i class="fa fa-arrow-left"/>
-                                <span class="btn-back-label">Volver</span>
+                            <button id="btn-back-gallery" class="btn-back" type="button" style="display: none;">
+                                <i class="fa fa-arrow-left"></i>
+                                <span>Volver</span>
                             </button>
+
                             <div class="brand">
-                                <span class="brand-row">SOM <span class="light">GALLERY</span></span>
-                                <span class="brand-sub">Catálogo Privado · <t t-esc="share.name"/></span>
+                                <span class="brand-row">
+                                    SOM <span class="light">GALLERY</span>
+                                </span>
+                                <span class="brand-sub">
+                                    Catálogo exclusivo de placas seleccionadas
+                                </span>
                             </div>
                         </div>
 
                         <div class="header-actions">
                             <div class="client-pill">
                                 <div class="avatar">
-                                    <t t-esc="(share.partner_id.name or 'C')[:1].upper()"/>
+                                    <t t-if="share.partner_id.name">
+                                        <t t-esc="share.partner_id.name[:1].upper()"/>
+                                    </t>
+                                    <t t-else="">C</t>
                                 </div>
                                 <div class="info">
-                                    <span class="label">Curado para</span>
+                                    <span class="label">Cliente</span>
                                     <span class="name" t-field="share.partner_id.name"/>
                                 </div>
                             </div>
-                            <button id="cart-toggle" class="btn-cart" title="Tu selección">
-                                <i class="fa fa-shopping-bag"/>
+
+                            <button id="cart-toggle" class="btn-cart" type="button">
+                                <i class="fa fa-shopping-bag"></i>
+                                <span class="d-none d-md-inline">Selección</span>
                                 <span id="cart-count" class="badge">0</span>
                             </button>
                         </div>
+
                     </div>
                 </header>
 
-                <!-- ===== HERO / RESUMEN EXCLUSIVO ===== -->
+
+                <!-- =================================================
+                     HERO
+                     ================================================= -->
                 <section class="gallery-hero">
                     <div class="hero-inner">
-                        <span class="hero-badge">
-                            <i class="fa fa-gem"/> Selección exclusiva
-                        </span>
+
+                        <div class="hero-badge">
+                            <i class="fa fa-lock"></i>
+                            <span>Selección privada para este cliente</span>
+                        </div>
+
                         <h1 class="hero-title">
-                            Una curaduría única para <span class="client-highlight" t-esc="share.partner_id.name"/>
+                            Material curado para
+                            <span class="client-highlight" t-field="share.partner_id.name"/>
                         </h1>
+
                         <p class="hero-subtitle">
-                            Cada placa es irrepetible. Este catálogo fue armado específicamente para ti y no se comparte con otros clientes mientras esté activo.
+                            Este catálogo fue armado exclusivamente con placas disponibles al momento de generar el enlace.
+                            Al apartar, las piezas quedan retenidas temporalmente para evitar que otro cliente las tome.
                         </p>
 
                         <div class="hero-stats">
-                            <div class="stat-card accent">
-                                <div class="stat-label">Placas curadas</div>
+                            <div class="stat-card">
+                                <div class="stat-label">Placas disponibles</div>
                                 <div class="stat-value">
                                     <t t-esc="total_pieces"/>
+                                    <span class="unit">pzas</span>
                                 </div>
                             </div>
-                            <div class="stat-card">
-                                <div class="stat-label">Superficie total</div>
+
+                            <div class="stat-card accent">
+                                <div class="stat-label">Metros totales</div>
                                 <div class="stat-value">
-                                    <t t-esc="'{:,.2f}'.format(total_area)"/>
+                                    <t t-esc="'%.2f' % total_area"/>
                                     <span class="unit">m²</span>
                                 </div>
                             </div>
+
                             <div class="stat-card">
                                 <div class="stat-label">Categorías</div>
                                 <div class="stat-value">
                                     <t t-esc="categories_count"/>
                                 </div>
                             </div>
-                            <div t-attf-class="stat-card {{ 'urgent' if days_left &lt;= 1 else '' }}">
-                                <div class="stat-label">Vigencia</div>
+
+                            <div class="stat-card urgent">
+                                <div class="stat-label">Vigencia del catálogo</div>
                                 <div class="stat-value">
                                     <t t-esc="days_left"/>
-                                    <span class="unit">
-                                        <t t-if="days_left == 1">día</t>
-                                        <t t-else="">días</t>
-                                    </span>
+                                    <span class="unit">días</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="hero-meta">
                             <div class="meta-item">
-                                <i class="fa fa-user-tie"/>
-                                <span>Tu ejecutivo: <strong t-esc="share.user_id.name"/></span>
+                                <i class="fa fa-user-tie"></i>
+                                <span>Ejecutivo: <strong t-field="share.user_id.name"/></span>
                             </div>
+
                             <div class="meta-item">
-                                <i class="fa fa-calendar-check"/>
-                                <span>Disponible hasta <strong t-esc="share.expiration_date.strftime('%d %b %Y')"/></span>
-                            </div>
-                            <div class="meta-item">
-                                <i class="fa fa-shield-alt"/>
-                                <span>Acceso único · No compartido</span>
+                                <i class="fa fa-file-lines"></i>
+                                <span>Referencia: <strong t-field="share.name"/></span>
                             </div>
                         </div>
+
                     </div>
                 </section>
 
-                <!-- ===== RULES BAR ===== -->
+
+                <!-- =================================================
+                     REGLAS DE APARTADO
+                     ================================================= -->
                 <section class="rules-bar">
                     <div class="rules-inner">
                         <div class="rule">
-                            <i class="fa fa-hand-pointer"/>
-                            <span>Toca <strong>Apartar</strong> en cada placa que te interese</span>
+                            <i class="fa fa-check-circle"></i>
+                            <span>Apartado temporal por <strong>5 días calendario</strong></span>
                         </div>
+
                         <div class="rule">
-                            <i class="fa fa-clock"/>
-                            <span>Las apartas <strong>5 días</strong> sin compromiso</span>
+                            <i class="fa fa-gem"></i>
+                            <span>Cada placa es una pieza <strong>única</strong></span>
                         </div>
+
                         <div class="rule">
-                            <i class="fa fa-phone"/>
-                            <span>Tu ejecutivo formaliza la <strong>compra final</strong></span>
+                            <i class="fa fa-triangle-exclamation"></i>
+                            <span>Al vencer, las placas se <strong>liberan automáticamente</strong></span>
                         </div>
                     </div>
                 </section>
 
-                <!-- ===== CONTENIDO PRINCIPAL ===== -->
+
+                <!-- =================================================
+                     GRID PRINCIPAL
+                     ================================================= -->
                 <div class="content-container" id="main-gallery-container">
 
                     <t t-foreach="grouped_images" t-as="category">
                         <div class="category-block" t-att-data-category="category">
+
                             <h2 class="category-title">
-                                <span class="cat-name"><t t-esc="category"/></span>
-                                <span class="cat-count">
-                                    <t t-esc="len(grouped_images[category])"/>
-                                    <t t-if="len(grouped_images[category]) == 1"> pieza</t>
-                                    <t t-else=""> piezas</t>
+                                <span class="cat-name">
+                                    <t t-esc="category"/>
                                 </span>
-                                <span class="line"/>
+                                <span class="cat-count">
+                                    <t t-esc="len(grouped_images[category])"/> elementos
+                                </span>
+                                <span class="line"></span>
                             </h2>
 
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
-                                    <div t-attf-class="bento-item #{'is-block' if img['type'] == 'block' else ''}"
+
+                                    <div t-attf-class="bento-item #{'bento-large' if img.get('is_large') else ''} #{'is-block' if img['type'] == 'block' else ''}"
                                          t-att-data-id="img['id']"
                                          t-att-data-type="img['type']"
                                          t-att-data-quant-id="img.get('quant_id')"
@@ -195,34 +237,44 @@
                                          t-att-data-url="img['url']">
 
                                         <div class="bento-card">
+
                                             <div class="img-container">
-                                                <img t-att-src="img['url']" loading="lazy" t-att-alt="img['lot_name']"/>
+                                                <img t-att-src="img['url']"
+                                                     loading="lazy"
+                                                     t-att-alt="img['lot_name']"/>
 
                                                 <div class="selection-indicator">
-                                                    <i class="fa fa-check"/>
+                                                    <i class="fa fa-check"></i>
                                                 </div>
 
                                                 <t t-if="img['type'] == 'block'">
                                                     <span class="block-badge">
-                                                        <i class="fa fa-layer-group"/>
+                                                        <i class="fa fa-layer-group"></i>
                                                         <t t-esc="img['count']"/> placas
                                                     </span>
                                                 </t>
-                                                <t t-else="">
+
+                                                <t t-if="img['type'] != 'block'">
                                                     <span class="unique-badge">
-                                                        <i class="fa fa-gem"/>Lote único
+                                                        <i class="fa fa-gem"></i>
+                                                        Lote único
                                                     </span>
                                                 </t>
 
                                                 <div class="card-actions">
                                                     <t t-if="img['type'] == 'block'">
-                                                        <button class="btn-expand open-block-btn" type="button" title="Ver contenido del bloque">
-                                                            <i class="fa fa-folder-open"/>
+                                                        <button class="btn-expand open-block-btn"
+                                                                type="button"
+                                                                title="Ver contenido del bloque">
+                                                            <i class="fa fa-folder-open"></i>
                                                         </button>
                                                     </t>
+
                                                     <t t-else="">
-                                                        <button class="btn-expand lightbox-trigger" type="button" title="Ampliar">
-                                                            <i class="fa fa-expand"/>
+                                                        <button class="btn-expand lightbox-trigger"
+                                                                type="button"
+                                                                title="Ampliar">
+                                                            <i class="fa fa-expand"></i>
                                                         </button>
                                                     </t>
                                                 </div>
@@ -230,151 +282,215 @@
 
                                             <div class="card-footer">
                                                 <div class="info-text">
-                                                    <span class="product-name" t-esc="img.get('product_name', img.get('name'))"/>
+                                                    <span class="product-name"
+                                                          t-esc="img.get('product_name', img.get('name'))"/>
+
                                                     <div class="meta">
-                                                        <span class="lot"><t t-esc="img['lot_name']"/></span>
-                                                        <t t-if="img['type'] != 'block' and img['dimensions']">
+                                                        <span class="lot">
+                                                            <t t-esc="img['lot_name']"/>
+                                                        </span>
+
+                                                        <t t-if="img['type'] != 'block'">
                                                             <span class="sep">·</span>
                                                             <span class="dims" t-esc="img['dimensions']"/>
                                                         </t>
                                                     </div>
+
                                                     <span class="area-badge">
-                                                        <t t-esc="'{:,.2f}'.format(img['area'])"/> m²
+                                                        <t t-esc="img['area']"/> m²
                                                     </span>
                                                 </div>
+
                                                 <button class="btn-add-cart" type="button">
-                                                    <i class="fa fa-plus"/>
+                                                    <i class="fa fa-plus"></i>
                                                     <span>
                                                         <t t-if="img['type'] == 'block'">Apartar bloque</t>
                                                         <t t-else="">Apartar</t>
                                                     </span>
                                                 </button>
                                             </div>
+
                                         </div>
                                     </div>
+
                                 </t>
                             </div>
+
                         </div>
                     </t>
 
                     <div t-if="not grouped_images" class="empty-state">
-                        <h1>Sin material disponible</h1>
-                        <p>En este momento no hay placas disponibles para mostrar en tu catálogo. Tu ejecutivo se pondrá en contacto contigo para coordinar.</p>
+                        <h1>Sin placas disponibles</h1>
+                        <p>No hay imágenes disponibles en este momento.</p>
                     </div>
+
                 </div>
             </div>
 
-            <!-- ===== STICKY CART BAR ===== -->
-            <div id="sticky-cart-bar" class="sticky-cart-bar">
-                <div class="summary">
-                    <span class="label">Tu selección</span>
-                    <span class="value">
-                        <strong id="sticky-count">0</strong> placas · <strong id="sticky-area">0.00</strong> m²
-                    </span>
-                </div>
-                <button id="sticky-open-cart" class="btn-open-cart" type="button">
-                    Ver y reservar <i class="fa fa-arrow-right"/>
-                </button>
-            </div>
 
-            <!-- ===== CONTACT FAB ===== -->
-            <div class="contact-fab" t-if="share.user_id.partner_id.mobile or share.user_id.partner_id.phone">
-                <span class="fab-tooltip">
-                    Habla con <strong t-esc="share.user_id.name"/>
-                </span>
-                <a class="fab-button"
-                   t-att-href="'https://wa.me/' + (share.user_id.partner_id.mobile or share.user_id.partner_id.phone or '').replace(' ','').replace('+','').replace('-','') + '?text=Hola%20' + (share.user_id.name or '').replace(' ','%20') + ',%20vengo%20del%20cat%C3%A1logo%20' + share.name"
-                   target="_blank" rel="noopener" title="WhatsApp">
-                    <i class="fab fa-whatsapp"/>
-                </a>
-            </div>
-
-            <!-- ===== LIGHTBOX ===== -->
+            <!-- =====================================================
+                 LIGHTBOX
+                 ===================================================== -->
             <div id="lightbox" class="lightbox">
-                <button class="close-lightbox" type="button" title="Cerrar">
-                    <i class="fa fa-times"/>
-                </button>
-                <div class="lightbox-content" onmousemove="gallery.zoomImage(event)" onmouseleave="gallery.resetZoom()">
-                    <img id="lightbox-img" src=""/>
+                <button class="close-lightbox" type="button">&#215;</button>
+
+                <div class="lightbox-content"
+                     onmousemove="gallery.zoomImage(event)"
+                     onmouseleave="gallery.resetZoom()">
+                    <img id="lightbox-img" src="" alt="Vista ampliada"/>
                 </div>
+
                 <div class="lightbox-info">
                     <div class="info-piece">
-                        <i class="fa fa-cube"/>
-                        <strong id="lb-info-name"/>
+                        <i class="fa fa-gem"></i>
+                        <strong id="lb-info-name"></strong>
                     </div>
-                    <div class="info-sep"/>
+
+                    <div class="info-sep"></div>
+
                     <div class="info-piece">
-                        <i class="fa fa-tag"/>
-                        <span id="lb-info-lot"/>
+                        <i class="fa fa-tag"></i>
+                        <span id="lb-info-lot"></span>
                     </div>
-                    <div class="info-sep"/>
+
+                    <div class="info-sep"></div>
+
                     <div class="info-piece">
-                        <i class="fa fa-ruler-combined"/>
-                        <span id="lb-info-dims"/>
+                        <i class="fa fa-ruler-combined"></i>
+                        <span id="lb-info-dims"></span>
                     </div>
-                    <div class="info-sep"/>
+
+                    <div class="info-sep"></div>
+
                     <div class="info-piece">
-                        <i class="fa fa-vector-square"/>
-                        <strong id="lb-info-area"/>
+                        <i class="fa fa-vector-square"></i>
+                        <span id="lb-info-area"></span>
                     </div>
                 </div>
             </div>
 
-            <!-- ===== CART SIDEBAR ===== -->
+
+            <!-- =====================================================
+                 CARRITO
+                 ===================================================== -->
             <div id="cart-sidebar" class="cart-sidebar">
+
                 <div class="cart-header">
-                    <h3><i class="fa fa-gem"/> Tu Selección</h3>
-                    <button class="close-cart" type="button" title="Cerrar">
-                        <i class="fa fa-times"/>
-                    </button>
+                    <h3>
+                        <i class="fa fa-shopping-bag"></i>
+                        Mi selección
+                    </h3>
+                    <button class="close-cart" type="button">&#215;</button>
                 </div>
+
                 <div class="cart-rules-mini">
-                    <i class="fa fa-info-circle"/>
-                    <span>Apartado por <strong>5 días</strong> sin compromiso de compra</span>
+                    <i class="fa fa-clock"></i>
+                    <span>Apartado temporal por <strong>5 días calendario</strong></span>
                 </div>
-                <div class="cart-items" id="cart-items-container"/>
+
+                <div class="cart-items" id="cart-items-container"></div>
+
                 <div class="cart-footer">
                     <div class="totals">
                         <div class="row">
-                            <span>Placas seleccionadas</span>
+                            <span>Placas:</span>
                             <strong id="total-plates">0</strong>
                         </div>
+
                         <div class="row highlight">
-                            <span>Superficie total</span>
+                            <span>Total m²:</span>
                             <strong id="total-area">0.00 m²</strong>
                         </div>
                     </div>
 
                     <div class="expiry-note">
-                        <i class="fa fa-clock"/>
-                        <span>Las placas se mantendrán reservadas <strong>5 días</strong></span>
+                        <i class="fa fa-triangle-exclamation"></i>
+                        <span>Al confirmar, las placas se retienen temporalmente.</span>
                     </div>
 
-                    <button id="btn-confirm" class="btn-checkout" type="button" disabled="disabled">
-                        <i class="fa fa-lock"/>
-                        Confirmar Reserva
+                    <button id="btn-confirm" class="btn-checkout" type="button">
+                        <i class="fa fa-lock"></i>
+                        Confirmar reserva
                     </button>
                 </div>
+
             </div>
-            <div id="cart-overlay" class="cart-overlay"/>
+
+            <div id="cart-overlay" class="cart-overlay"></div>
+
+
+            <!-- =====================================================
+                 STICKY CTA MÓVIL
+                 ===================================================== -->
+            <div id="sticky-cart-bar" class="sticky-cart-bar">
+                <div class="summary">
+                    <span class="label">Selección actual</span>
+                    <span class="value">
+                        <strong id="sticky-count">0</strong> placas ·
+                        <strong id="sticky-area">0.00</strong> m²
+                    </span>
+                </div>
+
+                <button id="sticky-open-cart" class="btn-open-cart" type="button">
+                    <i class="fa fa-shopping-bag"></i>
+                    Ver
+                </button>
+            </div>
+
+
+            <!-- =====================================================
+                 CONTACTO WHATSAPP
+                 IMPORTANTE:
+                 No acceder directamente a partner.mobile.
+                 En esta base ese campo puede no existir.
+                 ===================================================== -->
+            <t t-set="salesperson_partner" t-value="share.user_id.partner_id"/>
+            <t t-set="salesperson_phone"
+               t-value="(('mobile' in salesperson_partner._fields and salesperson_partner.mobile) or ('phone' in salesperson_partner._fields and salesperson_partner.phone) or '')"/>
+            <t t-set="salesperson_phone_clean"
+               t-value="salesperson_phone and salesperson_phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('.', '').replace('+', '') or ''"/>
+
+            <div class="contact-fab" t-if="salesperson_phone_clean">
+                <a class="fab-button"
+                   t-att-href="'https://wa.me/%s' % salesperson_phone_clean"
+                   target="_blank"
+                   rel="noopener"
+                   aria-label="Contactar por WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </a>
+
+                <div class="fab-tooltip">
+                    Contactar a <strong t-esc="share.user_id.name"/>
+                </div>
+            </div>
+
         </t>
     </template>
 
+
+    <!-- =========================================================
+         Error: No encontrado
+         ========================================================= -->
     <template id="gallery_not_found">
         <t t-call="galeria.gallery_layout_headless">
             <div class="error-page">
-                <h1>Catálogo no encontrado</h1>
-                <p>El enlace que utilizaste no corresponde a ningún catálogo activo. Verifica con tu ejecutivo que el link sea correcto.</p>
+                <h1>404</h1>
+                <p>Catálogo no encontrado</p>
             </div>
         </t>
     </template>
 
+
+    <!-- =========================================================
+         Error: Expirado
+         ========================================================= -->
     <template id="gallery_expired">
         <t t-call="galeria.gallery_layout_headless">
             <div class="error-page">
-                <h1>Enlace Expirado</h1>
-                <p>Este catálogo exclusivo ya no está disponible. Contacta a tu ejecutivo para recibir una selección actualizada.</p>
+                <h1>Enlace expirado</h1>
+                <p>Este catálogo ya no está disponible.</p>
             </div>
         </t>
     </template>
+
 </odoo>
