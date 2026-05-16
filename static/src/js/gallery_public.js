@@ -24,8 +24,11 @@ class GalleryApp {
 
         const savedCart = localStorage.getItem(this.cartKey);
         if (savedCart) {
-            try { this.cart = JSON.parse(savedCart); }
-            catch (e) { this.cart = []; }
+            try {
+                this.cart = JSON.parse(savedCart);
+            } catch (e) {
+                this.cart = [];
+            }
         }
 
         const container = document.getElementById('main-gallery-container');
@@ -33,10 +36,10 @@ class GalleryApp {
             this.mainGridHTML = container.innerHTML;
         }
 
+        this.bindEvents();
         this.updateCartUI();
         this.updateButtonsState();
         this.updateSelectionStates();
-        this.bindEvents();
         this.animateOnScroll();
     }
 
@@ -46,16 +49,22 @@ class GalleryApp {
             // A. Botón Abrir Bloque
             const openBlockBtn = e.target.closest('.open-block-btn');
             if (openBlockBtn) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
+
                 const itemEl = openBlockBtn.closest('.bento-item');
-                if (itemEl) this.openBlockView(itemEl.dataset.id, itemEl.dataset.lot);
+                if (itemEl) {
+                    this.openBlockView(itemEl.dataset.id, itemEl.dataset.lot);
+                }
                 return;
             }
 
             // B. Lightbox
             const lightboxBtn = e.target.closest('.lightbox-trigger');
             if (lightboxBtn) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
+
                 this.openLightbox(lightboxBtn);
                 return;
             }
@@ -63,16 +72,21 @@ class GalleryApp {
             // C. Botón Apartar
             const addBtn = e.target.closest('.btn-add-cart');
             if (addBtn) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
+
                 this.handleAddToCartClick(addBtn);
                 return;
             }
 
-            // D. Click directo en card
+            // D. Click directo en imagen/card
             const imgContainer = e.target.closest('.img-container');
             const isButtonInside = e.target.closest('button');
+
             if (imgContainer && !isButtonInside) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
+
                 const itemEl = imgContainer.closest('.bento-item');
                 if (itemEl) {
                     if (itemEl.dataset.type === 'block') {
@@ -92,17 +106,20 @@ class GalleryApp {
             }
 
             // Eliminar del carrito
-            if (e.target.closest('.btn-remove')) {
+            const removeBtn = e.target.closest('.btn-remove');
+            if (removeBtn) {
                 e.preventDefault();
-                this.removeFromCart(e.target.closest('.btn-remove').dataset.id);
+                this.removeFromCart(removeBtn.dataset.id);
                 return;
             }
 
             // Toggle carrito
-            if (e.target.closest('#cart-toggle') ||
+            if (
+                e.target.closest('#cart-toggle') ||
                 e.target.closest('#sticky-open-cart') ||
                 e.target.closest('.close-cart') ||
-                e.target.closest('#cart-overlay')) {
+                e.target.closest('#cart-overlay')
+            ) {
                 e.preventDefault();
                 this.toggleCart();
                 return;
@@ -133,7 +150,51 @@ class GalleryApp {
         });
     }
 
-    // --- VISTAS ---
+    // =========================================================
+    // Seguridad / helpers
+    // =========================================================
+
+    escapeHtml(value) {
+        // No usar replaceAll(): puede romper compatibilidad en algunos bundles/navegadores.
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    openWhatsApp(url) {
+        if (!url) return false;
+
+        try {
+            const opened = window.open(url, '_blank');
+            if (opened) {
+                try {
+                    opened.opener = null;
+                } catch (error) {
+                    // Algunos navegadores bloquean acceso a opener.
+                }
+
+                try {
+                    opened.focus();
+                } catch (error) {
+                    // Algunos navegadores bloquean focus().
+                }
+
+                return true;
+            }
+        } catch (error) {
+            console.warn('[Gallery] WhatsApp popup bloqueado, abriendo en misma pestaña.', error);
+        }
+
+        window.location.href = url;
+        return false;
+    }
+
+    // =========================================================
+    // Vistas
+    // =========================================================
 
     openBlockView(blockId, blockLot) {
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
@@ -144,8 +205,13 @@ class GalleryApp {
         }
 
         const blockLabel = blockLot ? `#${blockLot}` : `#${blockId}`;
-
         const container = document.getElementById('main-gallery-container');
+
+        if (!container) {
+            this.showToast('No se encontró el contenedor de la galería', 'error');
+            return;
+        }
+
         let html = `
             <div class="category-block">
                 <h2 class="category-title">
@@ -156,35 +222,52 @@ class GalleryApp {
                 <div class="bento-grid">
         `;
 
-        details.forEach(img => { html += this.renderCardHtml(img); });
-        html += `</div></div>`;
+        details.forEach(img => {
+            html += this.renderCardHtml(img);
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
 
         container.innerHTML = html;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const backBtn = document.getElementById('btn-back-gallery');
-        if (backBtn) backBtn.style.display = 'flex';
+        if (backBtn) {
+            backBtn.style.display = 'flex';
+        }
 
         this.currentView = 'block';
         this.updateButtonsState();
         this.updateSelectionStates();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     restoreMainView() {
         const container = document.getElementById('main-gallery-container');
-        if (this.mainGridHTML) container.innerHTML = this.mainGridHTML;
+
+        if (container && this.mainGridHTML) {
+            container.innerHTML = this.mainGridHTML;
+        }
 
         const backBtn = document.getElementById('btn-back-gallery');
-        if (backBtn) backBtn.style.display = 'none';
+        if (backBtn) {
+            backBtn.style.display = 'none';
+        }
 
         this.currentView = 'main';
         this.updateButtonsState();
         this.updateSelectionStates();
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     renderCardHtml(img) {
-        const areaVal = (typeof img.area === 'number') ? img.area.toFixed(2) : parseFloat(img.area || 0).toFixed(2);
+        const areaVal = (typeof img.area === 'number')
+            ? img.area.toFixed(2)
+            : parseFloat(img.area || 0).toFixed(2);
 
         const safeId = this.escapeHtml(img.id);
         const safeQuantId = this.escapeHtml(img.quant_id);
@@ -210,14 +293,21 @@ class GalleryApp {
                 <div class="bento-card">
                     <div class="img-container">
                         <img src="${safeUrl}" loading="lazy" alt="${safeLotName}"/>
-                        <div class="selection-indicator"><i class="fa fa-check"></i></div>
+                        <div class="selection-indicator">
+                            <i class="fa fa-check"></i>
+                        </div>
+
                         <div class="card-actions">
                             <button class="btn-expand lightbox-trigger" type="button" title="Ampliar">
                                 <i class="fa fa-expand"></i>
                             </button>
                         </div>
-                        <span class="unique-badge"><i class="fa fa-gem"></i>Lote único</span>
+
+                        <span class="unique-badge">
+                            <i class="fa fa-gem"></i>Lote único
+                        </span>
                     </div>
+
                     <div class="card-footer">
                         <div class="info-text">
                             <span class="product-name">${safeName}</span>
@@ -228,8 +318,10 @@ class GalleryApp {
                             </div>
                             <span class="area-badge">${areaVal} m²</span>
                         </div>
+
                         <button class="btn-add-cart" type="button">
-                            <i class="fa fa-plus"></i><span>Apartar</span>
+                            <i class="fa fa-plus"></i>
+                            <span>Apartar</span>
                         </button>
                     </div>
                 </div>
@@ -237,7 +329,9 @@ class GalleryApp {
         `;
     }
 
-    // --- CARRITO ---
+    // =========================================================
+    // Carrito
+    // =========================================================
 
     handleAddToCartClick(btn) {
         const itemEl = btn.closest('.bento-item');
@@ -248,16 +342,22 @@ class GalleryApp {
 
         if (type === 'block') {
             const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
-            if (!details || details.length === 0) return;
+
+            if (!details || details.length === 0) {
+                this.showToast('No se pudo cargar el bloque', 'error');
+                return;
+            }
 
             const allIds = details.map(d => String(d.id));
             const inCartCount = this.cart.filter(c => allIds.includes(String(c.id))).length;
 
             if (inCartCount === details.length) {
                 allIds.forEach(childId => this.removeFromCart(childId, false));
+                this.saveCart();
                 this.showToast(`Bloque liberado (${details.length} placas)`, 'warning');
             } else {
                 let added = 0;
+
                 details.forEach(child => {
                     if (!this.cart.find(c => String(c.id) === String(child.id))) {
                         this.pushToCart({
@@ -267,18 +367,19 @@ class GalleryApp {
                             name: child.name,
                             lot_name: child.lot_name,
                             dims: child.dimensions,
-                            area: parseFloat(child.area),
+                            area: parseFloat(child.area || 0),
                             url: child.url
                         });
                         added++;
                     }
                 });
+
+                this.saveCart();
                 this.showToast(`+${added} placas apartadas del bloque`, 'success');
             }
-            this.saveCart();
-
         } else {
             const existingIndex = this.cart.findIndex(i => String(i.id) === String(id));
+
             if (existingIndex > -1) {
                 this.removeFromCart(id);
             } else {
@@ -292,6 +393,7 @@ class GalleryApp {
                     area: parseFloat(itemEl.dataset.area || 0),
                     url: itemEl.dataset.url
                 });
+
                 this.saveCart();
                 this.showToast('Placa apartada', 'success');
             }
@@ -308,6 +410,7 @@ class GalleryApp {
 
     removeFromCart(id, autoSave = true) {
         this.cart = this.cart.filter(item => String(item.id) !== String(id));
+
         if (autoSave) {
             this.saveCart();
             this.updateCartUI();
@@ -317,7 +420,11 @@ class GalleryApp {
     }
 
     saveCart() {
-        localStorage.setItem(this.cartKey, JSON.stringify(this.cart));
+        try {
+            localStorage.setItem(this.cartKey, JSON.stringify(this.cart));
+        } catch (error) {
+            console.warn('[Gallery] No se pudo guardar el carrito en localStorage.', error);
+        }
     }
 
     updateButtonsState() {
@@ -330,18 +437,22 @@ class GalleryApp {
         }
 
         if (cartToggleBtn) {
-            this.cart.length > 0
-                ? cartToggleBtn.classList.add('active-cart')
-                : cartToggleBtn.classList.remove('active-cart');
+            if (this.cart.length > 0) {
+                cartToggleBtn.classList.add('active-cart');
+            } else {
+                cartToggleBtn.classList.remove('active-cart');
+            }
         }
 
         const stickyBar = document.getElementById('sticky-cart-bar');
         if (stickyBar) {
             if (this.cart.length > 0) {
                 stickyBar.classList.add('visible');
+
                 const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0);
                 const sCount = document.getElementById('sticky-count');
                 const sArea = document.getElementById('sticky-area');
+
                 if (sCount) sCount.textContent = this.cart.length;
                 if (sArea) sArea.textContent = totalArea.toFixed(2);
             } else {
@@ -359,10 +470,11 @@ class GalleryApp {
 
             if (type === 'block') {
                 const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
+
                 if (details && details.length > 0) {
                     const allIds = details.map(d => String(d.id));
                     const countInCart = this.cart.filter(c => allIds.includes(String(c.id))).length;
-                    isSelected = (countInCart === details.length);
+                    isSelected = countInCart === details.length;
                 }
             } else {
                 isSelected = this.cart.some(i => String(i.id) === String(id));
@@ -391,10 +503,11 @@ class GalleryApp {
 
             if (type === 'block') {
                 const details = this.config.blocks_details ? this.config.blocks_details[id] : [];
+
                 if (details && details.length > 0) {
                     const allIds = details.map(d => String(d.id));
                     const countInCart = this.cart.filter(c => allIds.includes(String(c.id))).length;
-                    isSelected = (countInCart === details.length);
+                    isSelected = countInCart === details.length;
                 }
             } else {
                 isSelected = this.cart.some(i => String(i.id) === String(id));
@@ -409,6 +522,7 @@ class GalleryApp {
         if (!container) return;
 
         container.innerHTML = '';
+
         let totalArea = 0;
 
         if (this.cart.length === 0) {
@@ -417,7 +531,8 @@ class GalleryApp {
                     <i class="fa fa-gem"></i>
                     <p>Tu selección está vacía</p>
                     <small>Apartar placas no compromete su compra</small>
-                </div>`;
+                </div>
+            `;
         } else {
             this.cart.forEach(item => {
                 totalArea += item.area || 0;
@@ -436,13 +551,15 @@ class GalleryApp {
                         <h4>${safeName}</h4>
                         <div class="lot-pill">${safeLotName}</div>
                         <div class="item-meta">
-                            ${safeDims ? safeDims + ' · ' : ''}<span class="area">${(item.area || 0).toFixed(2)} m²</span>
+                            ${safeDims ? safeDims + ' · ' : ''}
+                            <span class="area">${(item.area || 0).toFixed(2)} m²</span>
                         </div>
                     </div>
                     <button class="btn-remove" type="button" data-id="${safeId}" title="Quitar">
                         <i class="fa fa-times"></i>
                     </button>
                 `;
+
                 container.appendChild(div);
             });
         }
@@ -469,6 +586,10 @@ class GalleryApp {
             document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
         }
     }
+
+    // =========================================================
+    // Lightbox
+    // =========================================================
 
     openLightbox(btn) {
         const itemEl = btn.closest('.bento-item');
@@ -513,7 +634,9 @@ class GalleryApp {
 
         if (img) {
             img.style.transform = 'scale(1)';
-            setTimeout(() => { img.style.transformOrigin = 'center center'; }, 300);
+            setTimeout(() => {
+                img.style.transformOrigin = 'center center';
+            }, 300);
         }
     }
 
@@ -522,42 +645,16 @@ class GalleryApp {
         if (!img) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width * 100;
-        const y = (e.clientY - rect.top) / rect.height * 100;
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
 
         img.style.transformOrigin = `${x}% ${y}%`;
         img.style.transform = 'scale(2.4)';
     }
 
-    escapeHtml(value) {
-        return String(value || '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-    }
-
-    openWhatsApp(url) {
-        if (!url) return false;
-
-        let opened = null;
-
-        try {
-            opened = window.open(url, '_blank');
-            if (opened) {
-                try { opened.opener = null; } catch (error) {}
-                try { opened.focus(); } catch (error) {}
-                return true;
-            }
-        } catch (error) {
-            opened = null;
-        }
-
-        // Si el navegador bloquea el popup, se abre en la misma pestaña.
-        window.location.href = url;
-        return false;
-    }
+    // =========================================================
+    // UI helpers
+    // =========================================================
 
     showToast(message, type = 'info') {
         let toast = document.getElementById('gallery-toast');
@@ -577,7 +674,10 @@ class GalleryApp {
         };
 
         toast.className = `gallery-toast ${type}`;
-        toast.innerHTML = `<i class="fa ${iconMap[type] || iconMap.info}"></i><span>${this.escapeHtml(message)}</span>`;
+        toast.innerHTML = `
+            <i class="fa ${iconMap[type] || iconMap.info}"></i>
+            <span>${this.escapeHtml(message)}</span>
+        `;
 
         clearTimeout(this._toastTimer);
         requestAnimationFrame(() => toast.classList.add('show'));
@@ -591,6 +691,10 @@ class GalleryApp {
             el.style.animationDelay = `${Math.min(idx * 30, 600)}ms`;
         });
     }
+
+    // =========================================================
+    // Confirmación de reserva
+    // =========================================================
 
     async confirmReservation() {
         if (this.cart.length === 0) return;
@@ -624,6 +728,7 @@ class GalleryApp {
                 #disclaimer-confirm:hover { background:#e8c468!important; box-shadow:0 8px 28px rgba(212,175,55,0.55); transform:translateY(-1px); }
                 #disclaimer-cancel:hover { background:rgba(255,255,255,0.06)!important; border-color:#777!important; color:#fff!important; }
             </style>
+
             <div id="disclaimer-box" style="background:#0f0f0f;border:1px solid rgba(212,175,55,0.3);border-radius:18px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 0 80px rgba(212,175,55,0.2),0 24px 64px rgba(0,0,0,0.7);">
                 <div style="background:linear-gradient(135deg,#a8801e 0%,#d4af37 50%,#a8801e 100%);padding:24px 28px 20px;text-align:center;position:relative;">
                     <div style="font-size:2.6rem;line-height:1;margin-bottom:6px;">⏳</div>
@@ -637,6 +742,7 @@ class GalleryApp {
                             <div style="font-size:0.66rem;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Placas</div>
                             <div style="font-size:1.5rem;color:#fff;font-weight:800;line-height:1;">${totalCount}</div>
                         </div>
+
                         <div style="background:rgba(255,255,255,0.03);border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;text-align:center;">
                             <div style="font-size:0.66rem;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Total m²</div>
                             <div style="font-size:1.5rem;color:#d4af37;font-weight:800;line-height:1;">${totalArea}</div>
@@ -667,7 +773,10 @@ class GalleryApp {
                     </div>
 
                     <div style="display:flex;gap:10px;">
-                        <button id="disclaimer-cancel" type="button" style="flex:1;padding:13px 10px;background:transparent;border:1px solid #3a3a3a;color:#999;border-radius:10px;cursor:pointer;font-size:0.88rem;font-weight:700;transition:all 0.2s;">Cancelar</button>
+                        <button id="disclaimer-cancel" type="button" style="flex:1;padding:13px 10px;background:transparent;border:1px solid #3a3a3a;color:#999;border-radius:10px;cursor:pointer;font-size:0.88rem;font-weight:700;transition:all 0.2s;">
+                            Cancelar
+                        </button>
+
                         <button id="disclaimer-confirm" type="button" style="flex:2;padding:13px 10px;background:linear-gradient(135deg,#a8801e,#d4af37);border:none;color:#0f0f0f;border-radius:10px;cursor:pointer;font-size:0.92rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;transition:all 0.25s;box-shadow:0 6px 18px rgba(212,175,55,0.3);">
                             <i class="fa fa-check me-2"></i> Sí, Apartar Ahora
                         </button>
@@ -680,14 +789,28 @@ class GalleryApp {
         document.body.style.overflow = 'hidden';
 
         const userConfirmed = await new Promise(resolve => {
-            document.getElementById('disclaimer-cancel').addEventListener('click', () => resolve(false));
-            document.getElementById('disclaimer-confirm').addEventListener('click', () => resolve(true));
+            const cancelBtn = document.getElementById('disclaimer-cancel');
+            const confirmBtn = document.getElementById('disclaimer-confirm');
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => resolve(false));
+            }
+
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', () => resolve(true));
+            }
+
             disclaimer.addEventListener('click', (e) => {
-                if (e.target === disclaimer) resolve(false);
+                if (e.target === disclaimer) {
+                    resolve(false);
+                }
             });
         });
 
-        document.body.removeChild(disclaimer);
+        if (document.body.contains(disclaimer)) {
+            document.body.removeChild(disclaimer);
+        }
+
         document.body.style.overflow = '';
 
         if (!userConfirmed) return;
@@ -701,7 +824,9 @@ class GalleryApp {
         }
 
         try {
-            if (!this.config.token) throw new Error('Token no encontrado.');
+            if (!this.config.token) {
+                throw new Error('Token no encontrado.');
+            }
 
             const response = await fetch('/gallery/confirm_reservation', {
                 method: 'POST',
@@ -746,6 +871,7 @@ class GalleryApp {
                         'Reserva creada. El vendedor no tiene celular configurado para WhatsApp.',
                         'warning'
                     );
+
                     setTimeout(() => window.location.reload(), 5500);
                 }
             } else {
