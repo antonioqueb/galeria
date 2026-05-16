@@ -62,9 +62,7 @@
                 window.galleryRawData = <t t-out="json_data"/>;
             </script>
 
-            <!-- ==============================================
-                 Métricas calculadas inline (no necesitan backend)
-                 ============================================== -->
+            <!-- Métricas calculadas inline -->
             <t t-set="avg_per_piece" t-value="(total_area / total_pieces) if total_pieces else 0"/>
             <t t-set="created_date_str" t-value="share.create_date.strftime('%d %b').replace('.', '') if share.create_date else ''"/>
 
@@ -137,14 +135,8 @@
                             Al apartar, las piezas quedan retenidas temporalmente para evitar que otro cliente las tome.
                         </p>
 
-                        <!-- ==========================================
-                             STATS: 4 en móvil (sin .stat-extra),
-                             6 en desktop (con .stat-extra)
-                             5 en tablet (oculta el 6° en CSS)
-                             ========================================== -->
                         <div class="hero-stats">
 
-                            <!-- 1. Placas disponibles (acento principal) -->
                             <div class="stat-card accent">
                                 <div class="stat-label">
                                     <i class="fa fa-layer-group"></i>
@@ -156,7 +148,6 @@
                                 </div>
                             </div>
 
-                            <!-- 2. Metros totales -->
                             <div class="stat-card">
                                 <div class="stat-label">
                                     <i class="fa fa-ruler-combined"></i>
@@ -168,7 +159,6 @@
                                 </div>
                             </div>
 
-                            <!-- 3. Categorías -->
                             <div class="stat-card">
                                 <div class="stat-label">
                                     <i class="fa fa-folder-open"></i>
@@ -179,7 +169,6 @@
                                 </div>
                             </div>
 
-                            <!-- 4. Vigencia -->
                             <div class="stat-card urgent">
                                 <div class="stat-label">
                                     <i class="fa fa-hourglass-half"></i>
@@ -191,7 +180,6 @@
                                 </div>
                             </div>
 
-                            <!-- 5. Promedio por placa (SOLO DESKTOP / TABLET) -->
                             <div class="stat-card stat-extra">
                                 <div class="stat-label">
                                     <i class="fa fa-square-poll-vertical"></i>
@@ -203,7 +191,6 @@
                                 </div>
                             </div>
 
-                            <!-- 6. Fecha generación (SOLO DESKTOP) -->
                             <div class="stat-card stat-extra">
                                 <div class="stat-label">
                                     <i class="fa fa-calendar-check"></i>
@@ -278,13 +265,17 @@
                             <div class="bento-grid">
                                 <t t-foreach="grouped_images[category]" t-as="img">
 
+                                    <!-- data-lot:
+                                         - Si es BLOQUE -> usa block_name (ej: B-2024-037)
+                                         - Si es PLACA -> usa lot_name (lote individual)
+                                         Fallback a img['id'] si block_name no existe. -->
                                     <div t-attf-class="bento-item #{'bento-large' if img.get('is_large') else ''} #{'is-block' if img['type'] == 'block' else ''}"
                                          t-att-data-id="img['id']"
                                          t-att-data-type="img['type']"
                                          t-att-data-quant-id="img.get('quant_id')"
                                          t-att-data-lot-id="img.get('lot_id')"
                                          t-att-data-name="img.get('product_name', img.get('name'))"
-                                         t-att-data-lot="img['lot_name']"
+                                         t-att-data-lot="(img.get('block_name') or img['id']) if img['type'] == 'block' else img['lot_name']"
                                          t-att-data-dims="img['dimensions']"
                                          t-att-data-area="img['area']"
                                          t-att-data-url="img['url']">
@@ -489,9 +480,6 @@
 
             <!-- =====================================================
                  CONTACTO WHATSAPP
-                 IMPORTANTE:
-                 No acceder directamente a partner.mobile.
-                 En esta base ese campo puede no existir.
                  ===================================================== -->
             <t t-set="salesperson_partner" t-value="share.user_id.partner_id"/>
             <t t-set="salesperson_phone"
