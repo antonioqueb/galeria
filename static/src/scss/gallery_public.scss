@@ -90,6 +90,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     backdrop-filter: blur(16px) saturate(140%);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
 
+    @include mobile { padding: 10px 0; }
+
     .header-content {
         display: flex;
         justify-content: space-between;
@@ -99,14 +101,20 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         margin: 0 auto;
         padding: 0 12px;
         gap: 16px;
+        min-width: 0;
+
+        @include mobile { gap: 8px; padding: 0 10px; }
     }
 
     .brand-area {
         display: flex;
         align-items: center;
         gap: 14px;
-        min-width: 0;
-        flex: 1;
+        min-width: 0;          /* crítico: permite que los hijos se reduzcan */
+        flex: 1 1 auto;
+        overflow: hidden;       /* contiene cualquier texto largo */
+
+        @include mobile { gap: 8px; }
     }
 
     .btn-back {
@@ -128,8 +136,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         flex-shrink: 0;
 
         @include mobile {
-            padding: 5px 11px;
-            font-size: 0.72rem;
+            padding: 5px 10px;
+            font-size: 0.68rem;
+            letter-spacing: 0.3px;
+            gap: 4px;
         }
 
         &:hover {
@@ -143,7 +153,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
         line-height: 1;
-        min-width: 0;
+        min-width: 0;            /* crítico */
+        flex: 1 1 auto;
+        overflow: hidden;
 
         .brand-row {
             font-size: 1.15rem;
@@ -151,7 +163,15 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             letter-spacing: 3px;
             color: $text-primary;
             white-space: nowrap;
-            @include mobile { font-size: 0.95rem; letter-spacing: 2px; }
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+
+            @include mobile {
+                font-size: 0.82rem;
+                letter-spacing: 1.5px;
+            }
+
             .light { font-weight: 300; color: $gold; }
         }
 
@@ -161,7 +181,16 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             letter-spacing: 1.5px;
             text-transform: uppercase;
             margin-top: 4px;
-            @include mobile { font-size: 0.6rem; margin-top: 2px; }
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+
+            @include mobile {
+                font-size: 0.56rem;
+                letter-spacing: 0.8px;
+                margin-top: 2px;
+            }
         }
     }
 
@@ -169,7 +198,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         align-items: center;
         gap: 12px;
-        flex-shrink: 0;
+        flex-shrink: 0;          /* nunca se reduce, mantiene el carrito accesible */
+
+        @include mobile { gap: 6px; }
     }
 
     .client-pill {
@@ -180,6 +211,15 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         border: 1px solid $border-subtle;
         padding: 6px 14px 6px 6px;
         border-radius: 999px;
+        max-width: 240px;
+        min-width: 0;
+
+        /* En tablet/laptop pequeño limita el ancho para que no se coma el header */
+        @media (min-width: 768px) and (max-width: 1100px) {
+            max-width: 180px;
+            padding: 5px 10px 5px 5px;
+            gap: 7px;
+        }
 
         @include mobile { display: none; }
 
@@ -202,6 +242,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             flex-direction: column;
             line-height: 1.2;
             min-width: 0;
+            overflow: hidden;
+
             .label {
                 font-size: 0.62rem;
                 color: $text-tertiary;
@@ -212,10 +254,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 font-size: 0.82rem;
                 color: $text-primary;
                 font-weight: 600;
-                max-width: 180px;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                max-width: 100%;
             }
         }
     }
@@ -237,7 +279,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-weight: 600;
         font-size: 0.85rem;
 
-        @include mobile { padding: 7px 12px; font-size: 0.85rem; }
+        @include mobile {
+            padding: 7px 11px;
+            font-size: 0.8rem;
+            gap: 5px;
+        }
 
         &:hover {
             background: rgba(255, 255, 255, 0.06);
@@ -269,6 +315,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             display: none;
             min-width: 20px;
             text-align: center;
+
+            @include mobile { font-size: 0.68rem; padding: 1px 6px; min-width: 18px; }
         }
 
         i { font-size: 0.95rem; }
@@ -303,6 +351,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         max-width: 2400px;
         margin: 0 auto;
         padding: 0 16px;
+        min-width: 0;
+        overflow: hidden;        /* contiene nombres ultra largos */
+
+        @include mobile { padding: 0 14px; }
     }
 
     .hero-badge {
@@ -320,6 +372,14 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         letter-spacing: 1.2px;
         margin-bottom: 16px;
         animation: fadeInUp 0.5s $ease-out;
+        max-width: 100%;
+
+        @include mobile {
+            font-size: 0.62rem;
+            padding: 4px 11px;
+            margin-bottom: 12px;
+            letter-spacing: 0.8px;
+        }
 
         i { font-size: 0.7rem; }
     }
@@ -333,11 +393,24 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         letter-spacing: -0.5px;
         margin: 0 0 10px;
         animation: fadeInUp 0.6s 0.05s $ease-out backwards;
+        word-break: break-word;
+        overflow-wrap: anywhere;  /* nombres muy largos rompen línea */
+        hyphens: auto;
+        max-width: 100%;
+
+        @include mobile {
+            font-size: 1.4rem;
+            line-height: 1.2;
+            letter-spacing: -0.3px;
+        }
 
         .client-highlight {
             color: $gold;
             font-style: italic;
             font-weight: 600;
+            display: inline;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
     }
 
@@ -348,6 +421,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         line-height: 1.55;
         margin: 0 0 22px;
         animation: fadeInUp 0.6s 0.1s $ease-out backwards;
+
+        @include mobile {
+            font-size: 0.78rem;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
     }
 
     .hero-stats {
@@ -370,6 +449,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             transition: all 0.25s $ease;
             position: relative;
             overflow: hidden;
+            min-width: 0;
+
+            @include mobile { padding: 10px 12px; border-radius: 10px; }
 
             &:hover {
                 border-color: $border-gold;
@@ -383,6 +465,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 letter-spacing: 1.2px;
                 margin-bottom: 6px;
                 font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
+                @include mobile { font-size: 0.6rem; letter-spacing: 0.8px; margin-bottom: 4px; }
             }
 
             .stat-value {
@@ -390,7 +477,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 color: $text-primary;
                 font-weight: 700;
                 line-height: 1;
-                @include mobile { font-size: 1.2rem; }
+
+                @include mobile { font-size: 1.1rem; }
 
                 .unit {
                     font-size: 0.65rem;
@@ -399,6 +487,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                     font-weight: 400;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
+
+                    @include mobile { font-size: 0.58rem; }
                 }
             }
 
@@ -416,12 +506,27 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         color: $text-tertiary;
         animation: fadeInUp 0.6s 0.2s $ease-out backwards;
 
+        @include mobile {
+            gap: 10px 14px;
+            font-size: 0.7rem;
+            margin-top: 14px;
+        }
+
         .meta-item {
             display: flex;
             align-items: center;
             gap: 6px;
+            min-width: 0;
+            max-width: 100%;
 
-            i { color: $gold; opacity: 0.8; }
+            span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                min-width: 0;
+            }
+
+            i { color: $gold; opacity: 0.8; flex-shrink: 0; }
             strong { color: $text-secondary; font-weight: 600; }
         }
     }
@@ -434,6 +539,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     background: linear-gradient(90deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.02));
     border-bottom: 1px solid $border-subtle;
     padding: 11px 0;
+
+    @include mobile { padding: 9px 0; }
 
     .rules-inner {
         width: 96%;
@@ -448,7 +555,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-size: 0.78rem;
         color: $text-secondary;
 
-        @include mobile { font-size: 0.72rem; gap: 8px; }
+        @include mobile { font-size: 0.7rem; gap: 8px 12px; padding: 0 14px; }
     }
 
     .rule {
@@ -456,10 +563,14 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         align-items: center;
         gap: 8px;
 
+        @include mobile { gap: 6px; }
+
         i {
             color: $gold;
             font-size: 0.85rem;
             flex-shrink: 0;
+
+            @include mobile { font-size: 0.75rem; }
         }
 
         strong { color: $text-primary; font-weight: 600; }
@@ -515,6 +626,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     .cat-name {
         position: relative;
         padding-right: 16px;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
 
         &::after {
             content: '';
@@ -538,6 +653,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid $border-subtle;
         border-radius: 999px;
+        flex-shrink: 0;
+        white-space: nowrap;
+
+        @include mobile { font-size: 0.62rem; padding: 2px 8px; }
     }
 
     .line {
@@ -603,7 +722,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         .card-actions { opacity: 1; }
     }
 
-    /* Bloque agrupado: visualmente distinto (efecto de capas) */
     &.is-block {
         border-color: $border-gold;
         background: linear-gradient(145deg, $bg-elevated 0%, $bg-elevated-2 100%);
@@ -649,7 +767,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
     }
 
-    /* Estado seleccionado (cuando todas las placas están en carrito para bloques, o esta placa) */
     &.is-selected {
         border-color: $gold !important;
         box-shadow:
@@ -692,7 +809,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: block;
     }
 
-    /* Overlay gradient inferior para legibilidad de badges */
     &::after {
         content: '';
         position: absolute;
@@ -1400,7 +1516,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 800;
 
     @include mobile {
-        bottom: 84px; /* sobre el sticky bar */
+        bottom: 84px;
         right: 16px;
     }
 
@@ -1482,6 +1598,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         color: $gold;
         margin: 0 0 12px;
         font-weight: 500;
+
+        @include mobile { font-size: 2rem; }
     }
 
     p {
@@ -1489,6 +1607,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         color: $text-secondary;
         max-width: 480px;
         margin: 0 auto;
+
+        @include mobile { font-size: 0.88rem; }
     }
 }
 
@@ -1516,12 +1636,15 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: none;
     max-width: calc(100% - 40px);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &.show { transform: translateX(-50%) translateY(0); }
 
     i {
         color: $gold;
         font-size: 1rem;
+        flex-shrink: 0;
     }
 
     &.success i { color: $success; }
