@@ -48,7 +48,7 @@ class GalleryApp {
             if (openBlockBtn) {
                 e.preventDefault(); e.stopPropagation();
                 const itemEl = openBlockBtn.closest('.bento-item');
-                if (itemEl) this.openBlockView(itemEl.dataset.id);
+                if (itemEl) this.openBlockView(itemEl.dataset.id, itemEl.dataset.lot);
                 return;
             }
 
@@ -76,7 +76,7 @@ class GalleryApp {
                 const itemEl = imgContainer.closest('.bento-item');
                 if (itemEl) {
                     if (itemEl.dataset.type === 'block') {
-                        this.openBlockView(itemEl.dataset.id);
+                        this.openBlockView(itemEl.dataset.id, itemEl.dataset.lot);
                     } else {
                         this.openLightbox(imgContainer);
                     }
@@ -135,7 +135,7 @@ class GalleryApp {
 
     // --- VISTAS ---
 
-    openBlockView(blockId) {
+    openBlockView(blockId, blockLot) {
         const details = this.config.blocks_details ? this.config.blocks_details[blockId] : null;
 
         if (!details || details.length === 0) {
@@ -143,11 +143,14 @@ class GalleryApp {
             return;
         }
 
+        // Texto del título: solo el número de bloque (#A-12345), en blanco
+        const blockLabel = blockLot ? `#${blockLot}` : `#${blockId}`;
+
         const container = document.getElementById('main-gallery-container');
         let html = `
             <div class="category-block">
-                <h2 class="category-title text-primary">
-                    <span class="cat-name">Contenido del Bloque</span>
+                <h2 class="category-title">
+                    <span class="cat-name">${blockLabel}</span>
                     <span class="cat-count">${details.length} placas</span>
                     <span class="line"></span>
                 </h2>
