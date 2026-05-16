@@ -62,6 +62,12 @@
                 window.galleryRawData = <t t-out="json_data"/>;
             </script>
 
+            <!-- ==============================================
+                 Métricas calculadas inline (no necesitan backend)
+                 ============================================== -->
+            <t t-set="avg_per_piece" t-value="(total_area / total_pieces) if total_pieces else 0"/>
+            <t t-set="created_date_str" t-value="share.create_date.strftime('%d %b').replace('.', '') if share.create_date else ''"/>
+
             <div class="gallery-wrapper">
 
                 <!-- =================================================
@@ -131,7 +137,14 @@
                             Al apartar, las piezas quedan retenidas temporalmente para evitar que otro cliente las tome.
                         </p>
 
+                        <!-- ==========================================
+                             STATS: 4 en móvil (sin .stat-extra),
+                             6 en desktop (con .stat-extra)
+                             5 en tablet (oculta el 6° en CSS)
+                             ========================================== -->
                         <div class="hero-stats">
+
+                            <!-- 1. Placas disponibles (acento principal) -->
                             <div class="stat-card accent">
                                 <div class="stat-label">
                                     <i class="fa fa-layer-group"></i>
@@ -143,6 +156,7 @@
                                 </div>
                             </div>
 
+                            <!-- 2. Metros totales -->
                             <div class="stat-card">
                                 <div class="stat-label">
                                     <i class="fa fa-ruler-combined"></i>
@@ -154,6 +168,7 @@
                                 </div>
                             </div>
 
+                            <!-- 3. Categorías -->
                             <div class="stat-card">
                                 <div class="stat-label">
                                     <i class="fa fa-folder-open"></i>
@@ -164,6 +179,7 @@
                                 </div>
                             </div>
 
+                            <!-- 4. Vigencia -->
                             <div class="stat-card urgent">
                                 <div class="stat-label">
                                     <i class="fa fa-hourglass-half"></i>
@@ -174,6 +190,30 @@
                                     <span class="unit">días</span>
                                 </div>
                             </div>
+
+                            <!-- 5. Promedio por placa (SOLO DESKTOP / TABLET) -->
+                            <div class="stat-card stat-extra">
+                                <div class="stat-label">
+                                    <i class="fa fa-square-poll-vertical"></i>
+                                    Promedio
+                                </div>
+                                <div class="stat-value">
+                                    <span class="number"><t t-esc="'%.2f' % avg_per_piece"/></span>
+                                    <span class="unit">m²/pza</span>
+                                </div>
+                            </div>
+
+                            <!-- 6. Fecha generación (SOLO DESKTOP) -->
+                            <div class="stat-card stat-extra">
+                                <div class="stat-label">
+                                    <i class="fa fa-calendar-check"></i>
+                                    Generado
+                                </div>
+                                <div class="stat-value">
+                                    <span class="number"><t t-esc="created_date_str"/></span>
+                                </div>
+                            </div>
+
                         </div>
 
                         <div class="hero-meta">
