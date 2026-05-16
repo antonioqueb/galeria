@@ -6,7 +6,6 @@ from urllib.parse import quote
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-from odoo.http import request
 
 import logging
 
@@ -25,12 +24,14 @@ class GalleryShare(models.Model):
         readonly=True,
         default=lambda self: ('Nuevo')
     )
+
     partner_id = fields.Many2one(
         'res.partner',
         string="Cliente",
         required=True,
         tracking=True
     )
+
     user_id = fields.Many2one(
         'res.users',
         string="Vendedor",
@@ -52,22 +53,27 @@ class GalleryShare(models.Model):
         default=lambda self: str(uuid.uuid4()),
         readonly=True
     )
+
     create_date = fields.Datetime(
         string="Fecha Creación",
         default=fields.Datetime.now
     )
+
     expiration_date = fields.Datetime(
         string="Expira el",
         required=True
     )
+
     is_expired = fields.Boolean(
         string="Expirado",
         compute='_compute_is_expired'
     )
+
     image_ids = fields.Many2many(
         'stock.lot.image',
         string="Imágenes Seleccionadas"
     )
+
     share_url = fields.Char(
         string="URL Compartida",
         compute='_compute_share_url'
@@ -78,11 +84,16 @@ class GalleryShare(models.Model):
         compute="_compute_salesperson_whatsapp",
         readonly=True
     )
+
     salesperson_whatsapp_url = fields.Char(
         string="Liga WhatsApp del vendedor",
         compute="_compute_salesperson_whatsapp",
         readonly=True
     )
+
+    # =========================================================
+    # CRUD / Computed fields
+    # =========================================================
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -101,17 +112,29 @@ class GalleryShare(models.Model):
     @api.depends('expiration_date')
     def _compute_is_expired(self):
         now = fields.Datetime.now()
+
         for record in self:
             record.is_expired = record.expiration_date < now if record.expiration_date else False
 
     @api.depends('access_token')
     def _compute_share_url(self):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+
         for record in self:
             record.share_url = f"{base_url}/gallery/view/{record.access_token}"
 
-    @api.depends('user_id', 'user_id.partner_id', 'user_id.partner_id.mobile', 'user_id.partner_id.phone')
+    @api.depends('user_id', 'partner_id', 'name')
     def _compute_salesperson_whatsapp(self):
+        """
+        Importante:
+        No usar depends con campos opcionales como:
+        - user_id.partner_id.mobile
+        - user_id.partner_id.phone
+        - user_id.employee_id.mobile_phone
+
+        En algunas bases esos campos no existen y Odoo rompe el registry con:
+        Wrong @depends ... Dependency field 'mobile' not found in model res.partner.
+        """
         for record in self:
             number = record._get_salesperson_whatsapp_number()
             record.salesperson_whatsapp_number = number or False
@@ -122,13 +145,20 @@ class GalleryShare(models.Model):
             else:
                 record.salesperson_whatsapp_url = False
 
+    # =========================================================
+    # Acciones
+    # =========================================================
+
     def action_regenerate_token(self):
-        self.access_token = str(uuid.uuid4())
+        for record in self:
+            record.access_token = str(uuid.uuid4())
 
     def action_send_email(self):
         self.ensure_one()
+
         template = self.env.ref('galeria.email_template_gallery_share', raise_if_not_found=False)
         compose_form = self.env.ref('mail.email_compose_message_wizard_form')
+
         ctx = dict(
             default_model='gallery.share',
             default_res_ids=[self.id],
@@ -136,6 +166,7 @@ class GalleryShare(models.Model):
             default_composition_mode='comment',
             default_email_layout_xmlid="mail.mail_notification_light",
         )
+
         return {
             'name': 'Enviar Catálogo',
             'type': 'ir.actions.act_window',
@@ -154,6 +185,7 @@ class GalleryShare(models.Model):
             'image_ids': [(6, 0, image_ids)],
             'company_id': self.env.company.id,
         }])
+
         return {
             'id': share.id,
             'name': share.name,
@@ -187,7 +219,7 @@ class GalleryShare(models.Model):
         """
         Normaliza teléfonos para WhatsApp.
 
-        Reglas principales:
+        Reglas:
         - 10 dígitos mexicanos -> 52 + número.
         - 52 + 10 dígitos -> se respeta.
         - 521 + 10 dígitos -> se corrige a 52 + 10 dígitos.
@@ -226,8 +258,8 @@ class GalleryShare(models.Model):
 
     def _read_first_char_field(self, record, field_names):
         """
-        Lee de forma segura el primer campo tipo char disponible.
-        Evita depender directamente de módulos como hr.
+        Lee de forma segura el primer campo disponible.
+        Evita depender directamente de campos que pueden no existir.
         """
         if not record:
             return ""
@@ -245,19 +277,31 @@ class GalleryShare(models.Model):
         Obtiene el celular laboral del vendedor.
 
         Prioridad:
-        1. Empleado vinculado: mobile_phone.
-        2. Contacto del usuario: mobile.
-        3. Usuario: mobile, si existe.
-        4. Contacto / empleado / usuario phone como fallback.
+        1. Empleado vinculado, si existe:
+           - mobile_phone
+           - work_mobile
+           - phone
+           - work_phone
+        2. Contacto del usuario, si existe:
+           - mobile
+           - phone
+           - phone_sanitized
+        3. Usuario, si existe:
+           - mobile
+           - mobile_phone
+           - work_mobile
+           - phone
+           - work_phone
         """
         self.ensure_one()
 
         user = self.user_id.sudo()
         partner = user.partner_id.sudo() if user and user.partner_id else self.env['res.partner'].sudo().browse()
 
-        # 1) Celular laboral desde empleado si existe hr.employee.
+        # 1) Celular laboral desde empleado si existe hr.employee / employee_id.
         if user and 'employee_id' in user._fields and user.employee_id:
             employee = user.employee_id.sudo()
+
             value = self._read_first_char_field(employee, [
                 'mobile_phone',
                 'work_mobile',
@@ -267,30 +311,20 @@ class GalleryShare(models.Model):
             if value:
                 return value
 
-        # 2) Celular del contacto relacionado al usuario.
+        # 2) Contacto relacionado al usuario.
         value = self._read_first_char_field(partner, [
             'mobile',
+            'phone',
+            'phone_sanitized',
         ])
         if value:
             return value
 
-        # 3) Celular directo en res.users, si existe.
+        # 3) Campos directos en res.users, si existen por personalizaciones.
         value = self._read_first_char_field(user, [
             'mobile',
             'mobile_phone',
             'work_mobile',
-        ])
-        if value:
-            return value
-
-        # 4) Fallback a teléfono.
-        value = self._read_first_char_field(partner, [
-            'phone',
-        ])
-        if value:
-            return value
-
-        value = self._read_first_char_field(user, [
             'phone',
             'work_phone',
         ])
@@ -313,6 +347,7 @@ class GalleryShare(models.Model):
         Construye URL wa.me con mensaje precargado.
         """
         number = self._clean_phone_digits(number)
+
         if not number:
             return ""
 
@@ -336,7 +371,7 @@ class GalleryShare(models.Model):
 
     def _build_public_hold_whatsapp_message(self, order, total_pieces=0, total_area=0.0):
         """
-        Mensaje que se envía al vendedor después de confirmar el apartado.
+        Mensaje que se precarga para el vendedor después de confirmar el apartado.
         """
         self.ensure_one()
 
@@ -371,6 +406,7 @@ class GalleryShare(models.Model):
                 self.user_id.name,
                 order.name if order else '',
             )
+
             return {
                 'number': False,
                 'url': False,
@@ -399,7 +435,7 @@ class GalleryShare(models.Model):
         """
         Precio usado para reservas públicas creadas desde galería.
 
-        Se mantiene la misma lógica anterior:
+        Lógica:
         1. Usa x_price_usd_1 si existe y tiene valor.
         2. Si no existe o es 0, usa list_price.
         """
@@ -420,7 +456,6 @@ class GalleryShare(models.Model):
         """
         Crea una orden de reserva basada en la selección del cliente externo.
 
-        Corrección importante:
         - Agrupa los lotes por producto.
         - Devuelve liga WhatsApp del vendedor con mensaje precargado.
         """
