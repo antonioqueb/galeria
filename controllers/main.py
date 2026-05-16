@@ -15,10 +15,10 @@ _logger = logging.getLogger(__name__)
 # === Reglas de agrupación visual ===
 # Un bloque (lotes con mismo x_bloque) se muestra agrupado solo si:
 #   1. Tiene 5 o más placas (más de 4)
-#   2. El producto al que pertenece tiene 4 o más bloques que cumplen (1)
+#   2. La CATEGORÍA a la que pertenece tiene 4 o más bloques de ese tamaño
 # De lo contrario, las placas se muestran individuales (evita cards solitarios).
 THRESHOLD_BLOCK_SIZE = 5
-THRESHOLD_PRODUCT_BLOCKS = 4
+THRESHOLD_CATEGORY_BLOCKS = 4
 
 
 class GalleryController(http.Controller):
@@ -91,28 +91,29 @@ class GalleryController(http.Controller):
             })
 
         # -------------------------------------------------------------
-        # 2. Agrupar items por (producto, bloque)
+        # 2. Agrupar items por (categoría, bloque)
+        #    La regla aplica a nivel categoría, no producto.
         # -------------------------------------------------------------
         block_map = defaultdict(list)
         loose_items = []  # placas sin bloque, van directo a individuales
 
         for item in valid_items:
             if item['block_name']:
-                block_map[(item['product_id'], item['block_name'])].append(item)
+                block_map[(item['categ_name'], item['block_name'])].append(item)
             else:
                 loose_items.append(item)
 
         # -------------------------------------------------------------
-        # 3. Contar bloques "grandes" (>= THRESHOLD_BLOCK_SIZE) por producto
+        # 3. Contar bloques "grandes" (>= THRESHOLD_BLOCK_SIZE) por categoría
         # -------------------------------------------------------------
-        big_blocks_per_product = defaultdict(int)
-        for (prod_id, _block), items in block_map.items():
+        big_blocks_per_category = defaultdict(int)
+        for (categ_name, _block), items in block_map.items():
             if len(items) >= THRESHOLD_BLOCK_SIZE:
-                big_blocks_per_product[prod_id] += 1
+                big_blocks_per_category[categ_name] += 1
 
-        eligible_products = {
-            pid for pid, count in big_blocks_per_product.items()
-            if count >= THRESHOLD_PRODUCT_BLOCKS
+        eligible_categories = {
+            cat for cat, count in big_blocks_per_category.items()
+            if count >= THRESHOLD_CATEGORY_BLOCKS
         }
 
         # -------------------------------------------------------------
@@ -138,12 +139,11 @@ class GalleryController(http.Controller):
             }
 
         # 4a. Bloques agrupables vs expandibles
-        for (prod_id, block_name), items in block_map.items():
+        for (categ_name, block_name), items in block_map.items():
             first = items[0]
-            categ = first['categ_name']
 
             should_group = (
-                prod_id in eligible_products
+                categ_name in eligible_categories
                 and len(items) >= THRESHOLD_BLOCK_SIZE
             )
 
@@ -167,7 +167,7 @@ class GalleryController(http.Controller):
                     'count': len(items),
                     'block_name': block_name,
                 }
-                final_grouped[categ].append(block_item)
+                final_grouped[categ_name].append(block_item)
                 blocks_data[block_id] = children
             else:
                 # expandir a singles
@@ -179,7 +179,7 @@ class GalleryController(http.Controller):
             final_grouped[i['categ_name']].append(build_single(i))
 
         # -------------------------------------------------------------
-        # 5. Stats globales (para hero / sesgo de escasez REAL)
+        # 5. Stats globales
         # -------------------------------------------------------------
         total_pieces = len(valid_items)
         total_area = round(sum(i['area'] for i in valid_items), 2)
@@ -205,10 +205,11 @@ class GalleryController(http.Controller):
         ))
 
         _logger.info(
-            "[Gallery] Token=%s | Categorías=%d | Bloques=%d | Singles=%d | Total=%d placas",
+            "[Gallery] Token=%s | Categorías=%d | Bloques=%d | Singles=%d | Total=%d placas | Elegibles=%s",
             token, categories_count, len(blocks_data),
             sum(1 for cat in ordered_categories.values() for i in cat if i['type'] == 'single'),
             total_pieces,
+            list(eligible_categories),
         )
 
         js_gallery_data = {
