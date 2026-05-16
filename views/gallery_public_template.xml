@@ -12,7 +12,7 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
                 <title t-esc="title or 'Galería de Placas'"/>
 
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Cormorant+Garamond:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Cormorant+Garamond:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
@@ -112,14 +112,13 @@
 
 
                 <!-- =================================================
-                     HERO
+                     HERO — Premium Editorial
                      ================================================= -->
                 <section class="gallery-hero">
                     <div class="hero-inner">
 
                         <div class="hero-badge">
-                            <i class="fa fa-lock"></i>
-                            <span>Selección privada para este cliente</span>
+                            Selección privada para este cliente
                         </div>
 
                         <h1 class="hero-title">
@@ -128,38 +127,50 @@
                         </h1>
 
                         <p class="hero-subtitle">
-                            Este catálogo fue armado exclusivamente con placas disponibles al momento de generar el enlace.
+                            Catálogo armado exclusivamente con placas <strong>disponibles al momento</strong> de generar el enlace.
                             Al apartar, las piezas quedan retenidas temporalmente para evitar que otro cliente las tome.
                         </p>
 
                         <div class="hero-stats">
-                            <div class="stat-card">
-                                <div class="stat-label">Placas disponibles</div>
+                            <div class="stat-card accent">
+                                <div class="stat-label">
+                                    <i class="fa fa-layer-group"></i>
+                                    Placas disponibles
+                                </div>
                                 <div class="stat-value">
-                                    <t t-esc="total_pieces"/>
+                                    <span class="number"><t t-esc="total_pieces"/></span>
                                     <span class="unit">pzas</span>
                                 </div>
                             </div>
 
-                            <div class="stat-card accent">
-                                <div class="stat-label">Metros totales</div>
+                            <div class="stat-card">
+                                <div class="stat-label">
+                                    <i class="fa fa-ruler-combined"></i>
+                                    Metros totales
+                                </div>
                                 <div class="stat-value">
-                                    <t t-esc="'%.2f' % total_area"/>
+                                    <span class="number"><t t-esc="'%.2f' % total_area"/></span>
                                     <span class="unit">m²</span>
                                 </div>
                             </div>
 
                             <div class="stat-card">
-                                <div class="stat-label">Categorías</div>
+                                <div class="stat-label">
+                                    <i class="fa fa-folder-open"></i>
+                                    Categorías
+                                </div>
                                 <div class="stat-value">
-                                    <t t-esc="categories_count"/>
+                                    <span class="number"><t t-esc="categories_count"/></span>
                                 </div>
                             </div>
 
                             <div class="stat-card urgent">
-                                <div class="stat-label">Vigencia del catálogo</div>
+                                <div class="stat-label">
+                                    <i class="fa fa-hourglass-half"></i>
+                                    Vigencia
+                                </div>
                                 <div class="stat-value">
-                                    <t t-esc="days_left"/>
+                                    <span class="number"><t t-esc="days_left"/></span>
                                     <span class="unit">días</span>
                                 </div>
                             </div>
@@ -168,12 +179,14 @@
                         <div class="hero-meta">
                             <div class="meta-item">
                                 <i class="fa fa-user-tie"></i>
-                                <span>Ejecutivo: <strong t-field="share.user_id.name"/></span>
+                                <span class="meta-label">Ejecutivo</span>
+                                <strong t-field="share.user_id.name"/>
                             </div>
 
                             <div class="meta-item">
-                                <i class="fa fa-file-lines"></i>
-                                <span>Referencia: <strong t-field="share.name"/></span>
+                                <i class="fa fa-hashtag"></i>
+                                <span class="meta-label">Referencia</span>
+                                <strong t-field="share.name"/>
                             </div>
                         </div>
 
@@ -187,18 +200,18 @@
                 <section class="rules-bar">
                     <div class="rules-inner">
                         <div class="rule">
-                            <i class="fa fa-check-circle"></i>
+                            <div class="rule-icon"><i class="fa fa-clock"></i></div>
                             <span>Apartado temporal por <strong>5 días calendario</strong></span>
                         </div>
 
                         <div class="rule">
-                            <i class="fa fa-gem"></i>
-                            <span>Cada placa es una pieza <strong>única</strong></span>
+                            <div class="rule-icon"><i class="fa fa-gem"></i></div>
+                            <span>Cada placa es una <strong>pieza única</strong></span>
                         </div>
 
                         <div class="rule">
-                            <i class="fa fa-triangle-exclamation"></i>
-                            <span>Al vencer, las placas se <strong>liberan automáticamente</strong></span>
+                            <div class="rule-icon"><i class="fa fa-unlock"></i></div>
+                            <span>Al vencer, se <strong>liberan automáticamente</strong></span>
                         </div>
                     </div>
                 </section>

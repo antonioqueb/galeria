@@ -72,12 +72,16 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     100% { background-position: 200% 0; }
 }
 @keyframes pulseSubtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
 }
 @keyframes ripple {
     0% { transform: scale(0); opacity: 1; }
     100% { transform: scale(4); opacity: 0; }
+}
+@keyframes shimmerLine {
+    0% { left: -100%; }
+    50%, 100% { left: 100%; }
 }
 
 /* ============================================================
@@ -138,7 +142,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-weight: 600;
         letter-spacing: 0.5px;
         white-space: nowrap;
-        flex-shrink: 0;          /* nunca se reduce */
+        flex-shrink: 0;
 
         @include mobile {
             padding: 6px 12px;
@@ -147,7 +151,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             gap: 5px;
         }
 
-        /* Ultra-compacto: solo flecha, sin texto "Volver" */
         @include mobile-xs {
             padding: 6px 10px;
             gap: 0;
@@ -216,10 +219,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
     }
 
-    /* ===== Reorganización cuando aparece btn-back =====
-       En móvil con btn-back activo, priorizar: btn-back + cart.
-       El brand-sub se oculta (la ref CAT/XXXX ya está en el hero).
-       El brand-row se compacta más para no competir por espacio. */
     @include mobile {
         .brand-area:has(.btn-back[style*="flex"]) {
             .brand .brand-sub { display: none; }
@@ -371,33 +370,49 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ============================================================
-   HERO / RESUMEN EXCLUSIVO (sesgo honesto de pertenencia)
+   HERO / RESUMEN EXCLUSIVO — Premium Editorial
    ============================================================ */
 .gallery-hero {
     background:
-        radial-gradient(ellipse at top, rgba(212, 175, 55, 0.06), transparent 60%),
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212, 175, 55, 0.08), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(212, 175, 55, 0.04), transparent 60%),
         linear-gradient(180deg, $bg-deep 0%, $bg-base 100%);
     border-bottom: 1px solid $border-subtle;
-    padding: 32px 0 28px;
+    padding: 48px 0 36px;
     position: relative;
     overflow: hidden;
 
+    /* Línea dorada superior con fade */
     &::before {
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0;
         height: 1px;
-        background: linear-gradient(90deg, transparent, $gold 50%, transparent);
-        opacity: 0.35;
+        background: linear-gradient(90deg, transparent 5%, $gold 50%, transparent 95%);
+        opacity: 0.4;
     }
 
-    @include mobile { padding: 22px 0 20px; }
+    /* Patrón sutil de "papel premium" */
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.015) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.02) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @include mobile { padding: 28px 0 24px; }
 
     .hero-inner {
         width: 96%;
         max-width: 2400px;
         margin: 0 auto;
-        padding: 0 16px;
+        padding: 0 20px;
+        position: relative;
+        z-index: 1;
         min-width: 0;
         overflow: hidden;
 
@@ -405,21 +420,23 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         @include mobile-xs { padding: 0 12px; }
     }
 
+    /* ===== Badge superior ===== */
     .hero-badge {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        background: $gold-faint;
+        gap: 10px;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.04));
         border: 1px solid $border-gold;
-        color: $gold;
-        padding: 5px 14px;
+        color: $gold-light;
+        padding: 7px 16px 7px 14px;
         border-radius: 999px;
-        font-size: 0.7rem;
+        font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1.2px;
-        margin-bottom: 16px;
+        letter-spacing: 1.6px;
+        margin-bottom: 22px;
         animation: fadeInUp 0.5s $ease-out;
+        position: relative;
         max-width: 100%;
         white-space: nowrap;
         overflow: hidden;
@@ -427,77 +444,128 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
         @include mobile {
             font-size: 0.62rem;
-            padding: 4px 11px;
-            margin-bottom: 12px;
-            letter-spacing: 0.8px;
+            padding: 5px 12px 5px 11px;
+            margin-bottom: 14px;
+            letter-spacing: 1px;
+            gap: 7px;
         }
 
-        i { font-size: 0.7rem; flex-shrink: 0; }
+        /* Punto pulsante dorado */
+        &::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: $gold;
+            box-shadow: 0 0 12px $gold;
+            animation: pulseSubtle 2.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        /* Oculta icono i original — usamos el punto pulsante */
+        i { display: none; }
     }
 
+    /* ===== Título principal ===== */
     .hero-title {
         font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-        font-size: clamp(1.7rem, 3.4vw, 2.6rem);
-        font-weight: 500;
+        font-size: clamp(1.8rem, 3.6vw, 3rem);
+        font-weight: 400;
         color: $text-primary;
-        line-height: 1.15;
-        letter-spacing: -0.5px;
-        margin: 0 0 10px;
+        line-height: 1.1;
+        letter-spacing: -0.8px;
+        margin: 0 0 14px;
         animation: fadeInUp 0.6s 0.05s $ease-out backwards;
         word-break: break-word;
         overflow-wrap: anywhere;
-        hyphens: auto;
-        max-width: 100%;
+        max-width: 900px;
 
         @include mobile {
-            font-size: 1.35rem;
-            line-height: 1.2;
-            letter-spacing: -0.3px;
+            font-size: 1.5rem;
+            line-height: 1.18;
+            letter-spacing: -0.4px;
+            margin-bottom: 10px;
         }
 
         @include mobile-xs {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
         }
 
         .client-highlight {
             color: $gold;
             font-style: italic;
-            font-weight: 600;
+            font-weight: 500;
             display: inline;
+            position: relative;
             word-break: break-word;
             overflow-wrap: anywhere;
+            background: linear-gradient(180deg, transparent 65%, rgba(212, 175, 55, 0.08) 65%);
+            padding: 0 2px;
         }
     }
 
+    /* ===== Subtítulo ===== */
     .hero-subtitle {
         color: $text-tertiary;
-        font-size: 0.92rem;
-        max-width: 640px;
-        line-height: 1.55;
-        margin: 0 0 22px;
+        font-size: 0.95rem;
+        max-width: 680px;
+        line-height: 1.6;
+        margin: 0 0 32px;
         animation: fadeInUp 0.6s 0.1s $ease-out backwards;
         word-break: break-word;
         overflow-wrap: anywhere;
 
         @include mobile {
-            font-size: 0.78rem;
-            line-height: 1.5;
-            margin-bottom: 16px;
+            font-size: 0.8rem;
+            line-height: 1.55;
+            margin-bottom: 22px;
         }
 
-        @include mobile-xs { font-size: 0.74rem; }
+        @include mobile-xs {
+            font-size: 0.76rem;
+            margin-bottom: 18px;
+        }
+
+        strong {
+            color: $text-secondary;
+            font-weight: 500;
+        }
     }
 
+    /* ===== Stats — Layout editorial tipo placa de museo ===== */
     .hero-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
-        max-width: 880px;
+        display: flex;
+        gap: 0;
+        max-width: 960px;
         animation: fadeInUp 0.6s 0.15s $ease-out backwards;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid $border-subtle;
+        border-radius: 16px;
+        padding: 4px;
+        position: relative;
+        overflow: hidden;
+
+        /* Brillo dorado que pasa */
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, $gold, transparent);
+            animation: shimmerLine 5s ease-in-out infinite;
+            animation-delay: 1s;
+        }
 
         @include mobile {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            padding: 0;
+            background: $border-subtle;
+            border-radius: 12px;
+            border-color: $border-subtle;
         }
 
         @include mobile-xxs {
@@ -505,97 +573,210 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .stat-card {
-            background: rgba(255, 255, 255, 0.025);
-            border: 1px solid $border-subtle;
+            flex: 1;
+            background: transparent;
+            border: none;
             border-radius: 12px;
-            padding: 14px 16px;
-            transition: all 0.25s $ease;
+            padding: 18px 22px;
+            transition: background 0.3s $ease;
             position: relative;
-            overflow: hidden;
             min-width: 0;
+            overflow: hidden;
 
-            @include mobile { padding: 10px 12px; border-radius: 10px; }
+            /* Separador vertical entre stats en desktop */
+            &:not(:last-child)::after {
+                content: '';
+                position: absolute;
+                right: 0;
+                top: 25%;
+                bottom: 25%;
+                width: 1px;
+                background: $border-subtle;
+            }
+
+            @include mobile {
+                background: $bg-base;
+                padding: 14px 16px;
+                border-radius: 0;
+
+                &::after { display: none !important; }
+
+                &:nth-child(1) { border-radius: 12px 0 0 0; }
+                &:nth-child(2) { border-radius: 0 12px 0 0; }
+                &:nth-child(3) { border-radius: 0 0 0 12px; }
+                &:nth-child(4) { border-radius: 0 0 12px 0; }
+            }
+
+            @include mobile-xs { padding: 12px 14px; }
+
+            @include mobile-xxs {
+                border-radius: 0 !important;
+                &:first-child { border-radius: 12px 12px 0 0 !important; }
+                &:last-child { border-radius: 0 0 12px 12px !important; }
+            }
 
             &:hover {
-                border-color: $border-gold;
-                background: rgba(255, 255, 255, 0.04);
+                background: rgba(212, 175, 55, 0.03);
             }
 
             .stat-label {
-                font-size: 0.68rem;
+                font-size: 0.65rem;
                 color: $text-tertiary;
                 text-transform: uppercase;
-                letter-spacing: 1.2px;
-                margin-bottom: 6px;
+                letter-spacing: 1.6px;
+                margin-bottom: 10px;
                 font-weight: 600;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-
-                @include mobile { font-size: 0.6rem; letter-spacing: 0.8px; margin-bottom: 4px; }
-            }
-
-            .stat-value {
-                font-size: 1.4rem;
-                color: $text-primary;
-                font-weight: 700;
-                line-height: 1.1;
                 display: flex;
-                align-items: baseline;
-                flex-wrap: wrap;
-                gap: 4px;
-                min-width: 0;
-                word-break: break-word;
-                overflow-wrap: anywhere;
+                align-items: center;
+                gap: 6px;
 
-                @include mobile { font-size: 1.05rem; }
-                @include mobile-xs { font-size: 0.95rem; }
+                @include mobile {
+                    font-size: 0.56rem;
+                    letter-spacing: 1px;
+                    margin-bottom: 6px;
+                }
 
-                .unit {
-                    font-size: 0.65rem;
-                    color: $text-tertiary;
-                    margin-left: 0;
-                    font-weight: 400;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    white-space: nowrap;
-
-                    @include mobile { font-size: 0.55rem; }
+                i {
+                    color: $gold;
+                    opacity: 0.6;
+                    font-size: 0.7rem;
+                    flex-shrink: 0;
                 }
             }
 
-            &.accent .stat-value { color: $gold; }
-            &.urgent .stat-value { color: $warning; }
+            .stat-value {
+                font-family: 'Cormorant Garamond', Georgia, serif;
+                font-size: 2rem;
+                color: $text-primary;
+                font-weight: 500;
+                line-height: 1;
+                display: flex;
+                align-items: baseline;
+                flex-wrap: nowrap;
+                gap: 6px;
+                min-width: 0;
+                letter-spacing: -0.5px;
+
+                @include mobile {
+                    font-size: 1.4rem;
+                    gap: 4px;
+                }
+
+                @include mobile-xs {
+                    font-size: 1.25rem;
+                }
+
+                .number {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    min-width: 0;
+                }
+
+                .unit {
+                    font-family: 'Inter', sans-serif;
+                    font-size: 0.62rem;
+                    color: $text-tertiary;
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+
+                    @include mobile { font-size: 0.54rem; letter-spacing: 0.6px; }
+                }
+            }
+
+            &.accent {
+                .stat-value .number { color: $gold; }
+                .stat-label i { opacity: 1; }
+            }
+
+            &.urgent {
+                .stat-value .number { color: $warning; }
+                .stat-label { color: rgba(251, 191, 36, 0.7); }
+                .stat-label i { color: $warning; opacity: 1; }
+            }
         }
     }
 
+    /* ===== Meta info (ejecutivo + referencia) ===== */
     .hero-meta {
-        margin-top: 18px;
+        margin-top: 24px;
         display: flex;
         flex-wrap: wrap;
-        gap: 18px;
+        gap: 0;
         font-size: 0.78rem;
         color: $text-tertiary;
         animation: fadeInUp 0.6s 0.2s $ease-out backwards;
+        max-width: 960px;
 
         @include mobile {
-            gap: 8px 14px;
             font-size: 0.7rem;
-            margin-top: 14px;
-        }
-
-        @include mobile-xs {
-            font-size: 0.66rem;
-            gap: 6px 10px;
+            margin-top: 16px;
+            flex-direction: column;
+            gap: 0;
         }
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            padding: 6px 18px 6px 0;
             min-width: 0;
-            max-width: 100%;
-            overflow: hidden;
+            position: relative;
+
+            &:not(:last-child) {
+                margin-right: 18px;
+
+                &::after {
+                    content: '';
+                    position: absolute;
+                    right: 0;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 3px;
+                    height: 3px;
+                    border-radius: 50%;
+                    background: $border-strong;
+                }
+            }
+
+            @include mobile {
+                padding: 4px 0;
+                margin-right: 0 !important;
+
+                &::after { display: none !important; }
+            }
+
+            i {
+                color: $gold;
+                opacity: 0.7;
+                font-size: 0.8rem;
+                flex-shrink: 0;
+            }
+
+            .meta-label {
+                color: $text-muted;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-size: 0.66rem;
+                font-weight: 600;
+
+                @include mobile { font-size: 0.6rem; letter-spacing: 0.8px; }
+            }
+
+            strong {
+                color: $text-secondary;
+                font-weight: 600;
+                font-family: 'JetBrains Mono', 'Courier New', monospace;
+                font-size: 0.78rem;
+                letter-spacing: 0.3px;
+
+                @include mobile { font-size: 0.72rem; }
+            }
 
             span {
                 overflow: hidden;
@@ -603,47 +784,47 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 white-space: nowrap;
                 min-width: 0;
             }
-
-            i { color: $gold; opacity: 0.8; flex-shrink: 0; }
-            strong { color: $text-secondary; font-weight: 600; }
         }
     }
 }
 
 /* ============================================================
-   RULES BAR (reglas claras y honestas del apartado)
+   RULES BAR — Trust signals con sello editorial
    ============================================================ */
 .rules-bar {
-    background: linear-gradient(90deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.02));
+    background:
+        linear-gradient(180deg, rgba(212, 175, 55, 0.04) 0%, transparent 100%),
+        $bg-base;
     border-bottom: 1px solid $border-subtle;
-    padding: 11px 0;
+    border-top: 1px solid rgba(212, 175, 55, 0.08);
+    padding: 14px 0;
     overflow: hidden;
+    position: relative;
 
-    @include mobile { padding: 9px 0; }
+    @include mobile { padding: 11px 0; }
 
     .rules-inner {
         width: 96%;
         max-width: 2400px;
         margin: 0 auto;
-        padding: 0 16px;
+        padding: 0 20px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 16px;
+        justify-content: center;
+        gap: 0;
         flex-wrap: wrap;
         font-size: 0.78rem;
         color: $text-secondary;
 
         @include mobile {
             font-size: 0.7rem;
-            gap: 6px 12px;
             padding: 0 14px;
             justify-content: flex-start;
+            gap: 0;
         }
 
         @include mobile-xs {
             font-size: 0.66rem;
-            gap: 5px 10px;
             padding: 0 12px;
         }
     }
@@ -651,28 +832,66 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     .rule {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        padding: 4px 24px;
         min-width: 0;
-        max-width: 100%;
+        position: relative;
 
-        @include mobile { gap: 6px; }
+        @include mobile {
+            padding: 6px 0;
+            gap: 8px;
+            width: 100%;
+        }
+
+        /* Separadores verticales en desktop */
+        &:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 14px;
+            background: $border-subtle;
+
+            @include mobile { display: none; }
+        }
+
+        /* Icono dorado contenido en círculo */
+        .rule-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: $gold-faint;
+            border: 1px solid $border-gold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            @include mobile { width: 20px; height: 20px; }
+
+            i {
+                color: $gold;
+                font-size: 0.7rem;
+
+                @include mobile { font-size: 0.65rem; }
+            }
+        }
 
         span {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             min-width: 0;
+
+            @include mobile { white-space: normal; }
         }
 
-        i {
-            color: $gold;
-            font-size: 0.85rem;
-            flex-shrink: 0;
-
-            @include mobile { font-size: 0.75rem; }
+        strong {
+            color: $text-primary;
+            font-weight: 700;
         }
-
-        strong { color: $text-primary; font-weight: 600; }
     }
 }
 
@@ -1167,7 +1386,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
         overflow: hidden;
 
-        /* === Quitar el "+" del botón siempre === */
         i { display: none !important; }
 
         @media (min-width: 768px) {
