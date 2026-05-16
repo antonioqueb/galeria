@@ -73,7 +73,7 @@
                         <div class="brand-area">
                             <button id="btn-back-gallery" class="btn-back" type="button" style="display: none;">
                                 <i class="fa fa-arrow-left"></i>
-                                <span>Volver</span>
+                                <span class="btn-back-label">Volver</span>
                             </button>
 
                             <div class="brand">
@@ -250,7 +250,7 @@
                                                 <t t-if="img['type'] == 'block'">
                                                     <span class="block-badge">
                                                         <i class="fa fa-layer-group"></i>
-                                                        <t t-esc="img['count']"/> placas
+                                                        <span><t t-esc="img['count']"/> placas</span>
                                                     </span>
                                                 </t>
 
@@ -302,11 +302,7 @@
                                                 </div>
 
                                                 <button class="btn-add-cart" type="button">
-                                                    <i class="fa fa-plus"></i>
-                                                    <span>
-                                                        <t t-if="img['type'] == 'block'">Apartar bloque</t>
-                                                        <t t-else="">Apartar</t>
-                                                    </span>
+                                                    <span>Apartar</span>
                                                 </button>
                                             </div>
 

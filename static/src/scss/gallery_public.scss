@@ -35,6 +35,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
 @mixin mobile { @media (max-width: 767px) { @content; } }
 @mixin mobile-xs { @media (max-width: 400px) { @content; } }
+@mixin mobile-xxs { @media (max-width: 340px) { @content; } }
 @mixin tablet { @media (min-width: 768px) and (max-width: 1023px) { @content; } }
 @mixin desktop { @media (min-width: 1024px) { @content; } }
 
@@ -52,6 +53,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 .gallery-wrapper {
     scrollbar-width: thin;
     scrollbar-color: $border-strong $bg-base;
+    overflow-x: hidden;     /* nunca scroll horizontal */
 }
 .gallery-wrapper ::-webkit-scrollbar { width: 8px; height: 8px; }
 .gallery-wrapper ::-webkit-scrollbar-track { background: $bg-base; }
@@ -105,6 +107,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         min-width: 0;
 
         @include mobile { gap: 8px; padding: 0 10px; }
+        @include mobile-xs { gap: 6px; padding: 0 8px; }
     }
 
     .brand-area {
@@ -116,6 +119,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         overflow: hidden;
 
         @include mobile { gap: 8px; }
+        @include mobile-xs { gap: 6px; }
     }
 
     .btn-back {
@@ -147,6 +151,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         @include mobile-xs {
             padding: 6px 10px;
             gap: 0;
+            min-width: 32px;
+            justify-content: center;
 
             .btn-back-label { display: none; }
         }
@@ -181,6 +187,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 letter-spacing: 1.5px;
             }
 
+            @include mobile-xs {
+                font-size: 0.72rem;
+                letter-spacing: 1px;
+            }
+
             .light { font-weight: 300; color: $gold; }
         }
 
@@ -200,6 +211,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 letter-spacing: 0.8px;
                 margin-top: 2px;
             }
+
+            @include mobile-xs { display: none; }
         }
     }
 
@@ -224,6 +237,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         flex-shrink: 0;
 
         @include mobile { gap: 6px; }
+        @include mobile-xs { gap: 4px; }
     }
 
     .client-pill {
@@ -309,6 +323,13 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
         @include mobile-xs {
             padding: 7px 10px;
+            font-size: 0.75rem;
+        }
+
+        @include mobile-xxs {
+            padding: 6px 9px;
+            font-size: 0.72rem;
+            gap: 4px;
         }
 
         &:hover {
@@ -380,7 +401,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         min-width: 0;
         overflow: hidden;
 
-        @include mobile { padding: 0 14px; }
+        @include mobile { padding: 0 14px; width: 100%; }
+        @include mobile-xs { padding: 0 12px; }
     }
 
     .hero-badge {
@@ -399,6 +421,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         margin-bottom: 16px;
         animation: fadeInUp 0.5s $ease-out;
         max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
 
         @include mobile {
             font-size: 0.62rem;
@@ -407,7 +432,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             letter-spacing: 0.8px;
         }
 
-        i { font-size: 0.7rem; }
+        i { font-size: 0.7rem; flex-shrink: 0; }
     }
 
     .hero-title {
@@ -425,9 +450,13 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         max-width: 100%;
 
         @include mobile {
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             line-height: 1.2;
             letter-spacing: -0.3px;
+        }
+
+        @include mobile-xs {
+            font-size: 1.2rem;
         }
 
         .client-highlight {
@@ -447,12 +476,16 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         line-height: 1.55;
         margin: 0 0 22px;
         animation: fadeInUp 0.6s 0.1s $ease-out backwards;
+        word-break: break-word;
+        overflow-wrap: anywhere;
 
         @include mobile {
             font-size: 0.78rem;
             line-height: 1.5;
             margin-bottom: 16px;
         }
+
+        @include mobile-xs { font-size: 0.74rem; }
     }
 
     .hero-stats {
@@ -465,6 +498,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         @include mobile {
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
+        }
+
+        @include mobile-xxs {
+            grid-template-columns: 1fr;
         }
 
         .stat-card {
@@ -502,19 +539,28 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 font-size: 1.4rem;
                 color: $text-primary;
                 font-weight: 700;
-                line-height: 1;
+                line-height: 1.1;
+                display: flex;
+                align-items: baseline;
+                flex-wrap: wrap;
+                gap: 4px;
+                min-width: 0;
+                word-break: break-word;
+                overflow-wrap: anywhere;
 
-                @include mobile { font-size: 1.1rem; }
+                @include mobile { font-size: 1.05rem; }
+                @include mobile-xs { font-size: 0.95rem; }
 
                 .unit {
                     font-size: 0.65rem;
                     color: $text-tertiary;
-                    margin-left: 4px;
+                    margin-left: 0;
                     font-weight: 400;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
+                    white-space: nowrap;
 
-                    @include mobile { font-size: 0.58rem; }
+                    @include mobile { font-size: 0.55rem; }
                 }
             }
 
@@ -533,9 +579,14 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         animation: fadeInUp 0.6s 0.2s $ease-out backwards;
 
         @include mobile {
-            gap: 10px 14px;
+            gap: 8px 14px;
             font-size: 0.7rem;
             margin-top: 14px;
+        }
+
+        @include mobile-xs {
+            font-size: 0.66rem;
+            gap: 6px 10px;
         }
 
         .meta-item {
@@ -544,6 +595,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             gap: 6px;
             min-width: 0;
             max-width: 100%;
+            overflow: hidden;
 
             span {
                 overflow: hidden;
@@ -565,6 +617,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     background: linear-gradient(90deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.02));
     border-bottom: 1px solid $border-subtle;
     padding: 11px 0;
+    overflow: hidden;
 
     @include mobile { padding: 9px 0; }
 
@@ -581,15 +634,35 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-size: 0.78rem;
         color: $text-secondary;
 
-        @include mobile { font-size: 0.7rem; gap: 8px 12px; padding: 0 14px; }
+        @include mobile {
+            font-size: 0.7rem;
+            gap: 6px 12px;
+            padding: 0 14px;
+            justify-content: flex-start;
+        }
+
+        @include mobile-xs {
+            font-size: 0.66rem;
+            gap: 5px 10px;
+            padding: 0 12px;
+        }
     }
 
     .rule {
         display: flex;
         align-items: center;
         gap: 8px;
+        min-width: 0;
+        max-width: 100%;
 
         @include mobile { gap: 6px; }
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
 
         i {
             color: $gold;
@@ -618,6 +691,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     padding: 36px 12px 120px;
 
     @include mobile { padding: 22px 8px 130px; width: 100%; }
+    @include mobile-xs { padding: 18px 6px 130px; }
 }
 
 /* ============================================================
@@ -626,6 +700,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 .category-block {
     margin-bottom: 44px;
     animation: fadeInUp 0.5s $ease-out;
+    min-width: 0;
 
     @include mobile { margin-bottom: 28px; }
 
@@ -642,11 +717,17 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     align-items: center;
     gap: 16px;
     letter-spacing: 0.5px;
+    min-width: 0;
 
     @include mobile {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         margin-bottom: 14px;
         gap: 10px;
+    }
+
+    @include mobile-xs {
+        font-size: 1rem;
+        gap: 8px;
     }
 
     .cat-name {
@@ -656,6 +737,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex-shrink: 1;
 
         &::after {
             content: '';
@@ -682,13 +764,15 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         flex-shrink: 0;
         white-space: nowrap;
 
-        @include mobile { font-size: 0.62rem; padding: 2px 8px; }
+        @include mobile { font-size: 0.6rem; padding: 2px 8px; letter-spacing: 0.8px; }
+        @include mobile-xs { font-size: 0.56rem; padding: 2px 7px; }
     }
 
     .line {
         flex: 1;
         height: 1px;
         background: linear-gradient(90deg, $border-subtle, transparent);
+        min-width: 12px;
     }
 
     &.text-primary {
@@ -717,6 +801,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         grid-auto-rows: auto;
         gap: 10px;
     }
+
+    @include mobile-xxs {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ============================================================
@@ -734,6 +822,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     animation: fadeInUp 0.45s $ease-out backwards;
     cursor: pointer;
+    min-width: 0;
 
     @include mobile { border-radius: 10px; }
 
@@ -812,6 +901,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     flex-direction: column;
     position: relative;
     z-index: 1;
+    min-width: 0;
 }
 
 /* ============================================================
@@ -826,6 +916,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
     @media (min-width: 768px) { height: 100%; }
     @include mobile { height: 150px; flex: none; }
+    @include mobile-xs { height: 140px; }
+    @include mobile-xxs { height: 180px; }
 
     img {
         width: 100%;
@@ -923,10 +1015,21 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         gap: 5px;
         z-index: 3;
         letter-spacing: 0.3px;
+        max-width: calc(100% - 20px);
 
-        @include mobile { font-size: 0.65rem; padding: 3px 7px; }
+        @include mobile {
+            font-size: 0.62rem;
+            padding: 3px 7px;
+            bottom: 6px;
+            right: 6px;
+        }
 
-        i { font-size: 0.7rem; }
+        i { font-size: 0.7rem; flex-shrink: 0; }
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     }
 
     .unique-badge {
@@ -961,6 +1064,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    min-width: 0;
 
     @media (min-width: 768px) {
         padding: 12px 14px;
@@ -972,13 +1076,19 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         padding: 8px 10px;
         height: auto;
         min-height: 62px;
+        gap: 6px;
+    }
+
+    @include mobile-xs {
+        padding: 7px 8px;
+        gap: 5px;
     }
 
     .info-text {
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
 
         .product-name {
@@ -988,9 +1098,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.25;
+            max-width: 100%;
 
             @media (min-width: 768px) { font-size: 0.9rem; margin-bottom: 3px; }
-            @include mobile { font-size: 0.75rem; margin-bottom: 2px; }
+            @include mobile { font-size: 0.74rem; margin-bottom: 2px; }
+            @include mobile-xs { font-size: 0.7rem; }
         }
 
         .meta {
@@ -999,9 +1111,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.3;
+            max-width: 100%;
 
             @media (min-width: 768px) { font-size: 0.74rem; }
-            @include mobile { font-size: 0.66rem; }
+            @include mobile { font-size: 0.64rem; }
+            @include mobile-xs { font-size: 0.6rem; }
 
             .lot { color: $text-secondary; font-weight: 500; }
             .sep { margin: 0 4px; opacity: 0.5; }
@@ -1015,9 +1129,14 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             display: inline-flex;
             align-items: center;
             gap: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
 
             @media (min-width: 768px) { font-size: 0.76rem; }
-            @include mobile { font-size: 0.68rem; }
+            @include mobile { font-size: 0.66rem; }
+            @include mobile-xs { font-size: 0.62rem; }
 
             &::before {
                 content: '';
@@ -1026,6 +1145,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 border-radius: 50%;
                 background: $gold;
                 opacity: 0.7;
+                flex-shrink: 0;
             }
         }
     }
@@ -1047,15 +1167,22 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
         overflow: hidden;
 
+        /* === Quitar el "+" del botón siempre === */
+        i { display: none !important; }
+
         @media (min-width: 768px) {
             padding: 7px 15px;
             font-size: 0.78rem;
         }
 
         @include mobile {
-            padding: 6px 11px;
-            font-size: 0.72rem;
-            i { display: none; }
+            padding: 6px 10px;
+            font-size: 0.7rem;
+        }
+
+        @include mobile-xs {
+            padding: 5px 9px;
+            font-size: 0.66rem;
         }
 
         &:hover:not(.in-cart) {
@@ -1070,8 +1197,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             border-color: $success;
             color: $success;
             font-weight: 700;
-
-            i { display: inline-block !important; }
         }
     }
 }
@@ -1096,28 +1221,40 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 
     &.visible { transform: translateY(0); }
 
     @include desktop { display: none; }
 
+    @include mobile-xs { padding: 10px 12px; gap: 8px; }
+
     .summary {
-        flex: 1;
+        flex: 1 1 auto;
         display: flex;
         flex-direction: column;
         min-width: 0;
+        overflow: hidden;
 
         .label {
             font-size: 0.65rem;
             color: $text-tertiary;
             text-transform: uppercase;
             letter-spacing: 0.6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .value {
             font-size: 0.95rem;
             color: $text-primary;
             font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            @include mobile-xs { font-size: 0.85rem; }
 
             strong { color: $gold; }
         }
@@ -1139,6 +1276,14 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         gap: 8px;
         box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
         white-space: nowrap;
+        flex-shrink: 0;
+
+        @include mobile-xs {
+            padding: 10px 16px;
+            font-size: 0.78rem;
+            letter-spacing: 0.4px;
+            gap: 6px;
+        }
 
         &:active { transform: scale(0.97); }
     }
@@ -1227,8 +1372,16 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-size: 0.85rem;
         color: $text-secondary;
         max-width: calc(100% - 40px);
+        flex-wrap: wrap;
+        justify-content: center;
 
-        @include mobile { font-size: 0.75rem; padding: 8px 14px; gap: 10px; }
+        @include mobile {
+            font-size: 0.72rem;
+            padding: 8px 14px;
+            gap: 8px;
+            bottom: 16px;
+            max-width: calc(100% - 24px);
+        }
 
         .info-piece {
             display: flex;
@@ -1237,8 +1390,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 100%;
 
-            i { color: $gold; font-size: 0.75rem; }
+            i { color: $gold; font-size: 0.75rem; flex-shrink: 0; }
             strong { color: #fff; font-weight: 600; }
         }
 
@@ -1247,6 +1401,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             height: 14px;
             background: $border;
             flex-shrink: 0;
+
+            @include mobile { display: none; }
         }
     }
 }
@@ -1285,9 +1441,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         justify-content: space-between;
         align-items: center;
         flex-shrink: 0;
+        gap: 12px;
         background:
             linear-gradient(180deg, rgba(212, 175, 55, 0.04), transparent),
             $bg-deep;
+
+        @include mobile { padding: 14px 16px; }
 
         h3 {
             margin: 0;
@@ -1299,8 +1458,14 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             align-items: center;
             gap: 10px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
 
-            i { color: $gold; font-size: 1.1rem; }
+            @include mobile { font-size: 1.15rem; }
+
+            i { color: $gold; font-size: 1.1rem; flex-shrink: 0; }
         }
 
         .close-cart {
@@ -1317,6 +1482,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             align-items: center;
             justify-content: center;
             transition: all 0.2s $ease;
+            flex-shrink: 0;
 
             &:hover {
                 background: $danger;
@@ -1337,15 +1503,25 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         gap: 8px;
         flex-shrink: 0;
 
-        i { color: $gold; }
+        @include mobile { padding: 9px 16px; font-size: 0.68rem; }
+
+        i { color: $gold; flex-shrink: 0; }
         strong { color: $gold-light; font-weight: 700; }
+        span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
 
     .cart-items {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 14px 18px;
         -webkit-overflow-scrolling: touch;
+
+        @include mobile { padding: 12px 14px; }
 
         .cart-empty {
             display: flex;
@@ -1355,6 +1531,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             min-height: 240px;
             color: $text-tertiary;
             text-align: center;
+            padding: 0 16px;
 
             i {
                 font-size: 2.6rem;
@@ -1378,6 +1555,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             padding: 12px 0;
             border-bottom: 1px solid $border-faint;
             animation: fadeInUp 0.3s $ease-out;
+            min-width: 0;
+
+            @include mobile { gap: 10px; padding: 10px 0; }
 
             &:last-child { border-bottom: none; }
 
@@ -1388,14 +1568,17 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 object-fit: cover;
                 flex-shrink: 0;
                 border: 1px solid $border-subtle;
+
+                @include mobile { width: 54px; height: 54px; }
             }
 
             .item-details {
-                flex: 1;
+                flex: 1 1 auto;
                 min-width: 0;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
+                overflow: hidden;
 
                 h4 {
                     margin: 0 0 3px;
@@ -1405,6 +1588,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    max-width: 100%;
+
+                    @include mobile { font-size: 0.8rem; }
                 }
 
                 .lot-pill {
@@ -1412,12 +1598,22 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                     color: $gold;
                     font-weight: 600;
                     margin-bottom: 3px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 100%;
                 }
 
                 .item-meta {
                     font-size: 0.72rem;
                     color: $text-tertiary;
                     line-height: 1.3;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 100%;
+
+                    @include mobile { font-size: 0.68rem; }
 
                     .area { color: $text-secondary; font-weight: 600; }
                 }
@@ -1449,6 +1645,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         background: $bg-base;
         flex-shrink: 0;
 
+        @include mobile { padding: 14px 16px; }
+
         .totals {
             margin-bottom: 14px;
 
@@ -1459,11 +1657,21 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
                 margin-bottom: 6px;
                 color: $text-tertiary;
                 font-size: 0.85rem;
+                gap: 10px;
+
+                span:first-child {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    min-width: 0;
+                }
 
                 strong {
                     color: #fff;
                     font-weight: 700;
                     font-size: 0.95rem;
+                    flex-shrink: 0;
+                    white-space: nowrap;
                 }
 
                 &.highlight strong { color: $gold; font-size: 1.1rem; }
@@ -1481,6 +1689,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             align-items: center;
             gap: 8px;
+
+            @include mobile { font-size: 0.68rem; padding: 8px 10px; }
 
             i { font-size: 0.85rem; flex-shrink: 0; }
             strong { color: #fde68a; font-weight: 700; }
@@ -1504,6 +1714,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             justify-content: center;
             gap: 8px;
             box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+
+            @include mobile { padding: 13px; font-size: 0.82rem; letter-spacing: 0.6px; }
 
             &:hover:not(:disabled) {
                 transform: translateY(-1px);
@@ -1546,6 +1758,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         right: 16px;
     }
 
+    @include mobile-xs {
+        bottom: 80px;
+        right: 12px;
+    }
+
     .fab-button {
         width: 56px;
         height: 56px;
@@ -1563,6 +1780,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
 
         @include mobile { width: 50px; height: 50px; font-size: 1.25rem; }
+        @include mobile-xs { width: 46px; height: 46px; font-size: 1.15rem; }
 
         &:hover {
             transform: scale(1.08) translateY(-2px);
@@ -1626,6 +1844,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         font-weight: 500;
 
         @include mobile { font-size: 2rem; }
+        @include mobile-xs { font-size: 1.7rem; }
     }
 
     p {
@@ -1635,6 +1854,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         margin: 0 auto;
 
         @include mobile { font-size: 0.88rem; }
+        @include mobile-xs { font-size: 0.82rem; }
     }
 }
 
@@ -1660,10 +1880,27 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     gap: 10px;
     transition: transform 0.35s $ease-out;
     pointer-events: none;
-    max-width: calc(100% - 40px);
+    max-width: calc(100% - 32px);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    @include mobile {
+        bottom: 90px;
+        padding: 10px 18px;
+        font-size: 0.78rem;
+        max-width: calc(100% - 24px);
+    }
+
+    @include mobile-xs {
+        bottom: 86px;
+        padding: 9px 16px;
+        font-size: 0.74rem;
+        border-radius: 14px;
+        white-space: normal;
+        text-overflow: clip;
+        text-align: center;
+    }
 
     &.show { transform: translateX(-50%) translateY(0); }
 
