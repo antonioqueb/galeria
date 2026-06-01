@@ -219,7 +219,7 @@ class GalleryController(http.Controller):
             'total_pieces': total_pieces,
             'total_area': total_area,
             'days_left': days_left,
-            'partner_name': share.partner_id.name or '',
+            'partner_name': (share.partner_id.name or '').title(),
             'salesperson': share.user_id.name or '',
         }
 

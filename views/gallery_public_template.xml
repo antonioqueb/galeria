@@ -104,7 +104,7 @@
                                 </div>
                                 <div class="info">
                                     <span class="label">Cliente</span>
-                                    <span class="name" t-field="share.partner_id.name"/>
+                                    <span class="name" t-esc="share.partner_id.name.title() if share.partner_id.name else ''"/>
                                 </div>
                             </div>
 
@@ -131,7 +131,7 @@
 
                         <h1 class="hero-title">
                             Material exclusivo para
-                            <span class="client-highlight" t-field="share.partner_id.name"/>
+                            <span class="client-highlight" t-esc="share.partner_id.name.title() if share.partner_id.name else ''"/>
                         </h1>
 
                         <div class="hero-meta">
