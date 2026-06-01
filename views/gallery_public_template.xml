@@ -247,9 +247,9 @@
                                                     </span>
                                                 </div>
 
-                                                <button class="btn-add-cart" type="button">
-                                                    <span>Apartar</span>
+                                                <button class="btn-add-cart" type="button" aria-label="Apartar">
                                                     <i class="fa fa-check"></i>
+                                                    <span class="sr-only">Apartar</span>
                                                 </button>
                                             </div>
 

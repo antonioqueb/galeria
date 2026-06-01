@@ -480,14 +480,16 @@ class GalleryApp {
             const labelSpan = btn.querySelector('span');
             const icon = btn.querySelector('i');
 
+            if (icon) icon.className = 'fa fa-check';
+
             if (isSelected) {
                 btn.classList.add('in-cart');
                 if (labelSpan) labelSpan.textContent = type === 'block' ? 'Bloque apartado' : 'Apartado';
-                if (icon) icon.className = 'fa fa-check';
+                btn.setAttribute('aria-label', type === 'block' ? 'Bloque apartado' : 'Apartado');
             } else {
                 btn.classList.remove('in-cart');
                 if (labelSpan) labelSpan.textContent = type === 'block' ? 'Apartar bloque' : 'Apartar';
-                if (icon) icon.className = 'fa fa-plus';
+                btn.setAttribute('aria-label', type === 'block' ? 'Apartar bloque' : 'Apartar');
             }
         });
     }

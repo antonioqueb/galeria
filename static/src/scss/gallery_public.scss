@@ -1411,64 +1411,55 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     .btn-add-cart {
         background: $bg-elevated-3;
         border: 1px solid $border-strong;
-        color: $text-primary;
-        border-radius: 999px;
-        font-weight: 600;
+        color: $text-tertiary;
+        border-radius: 50%;
         cursor: pointer;
         transition: all 0.2s $ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        white-space: nowrap;
         flex-shrink: 0;
-        gap: 5px;
+        padding: 0;
         position: relative;
         overflow: hidden;
+        width: 36px;
+        height: 36px;
 
-        i { display: none; }
+        @include mobile { width: 32px; height: 32px; }
+        @include mobile-xs { width: 30px; height: 30px; }
 
-        @media (min-width: 768px) {
-            padding: 7px 15px;
-            font-size: 0.78rem;
+        i {
+            display: inline-block;
+            font-size: 0.95rem;
+            line-height: 1;
+
+            @include mobile { font-size: 0.85rem; }
+            @include mobile-xs { font-size: 0.8rem; }
         }
 
-        @include mobile {
-            padding: 6px 10px;
-            font-size: 0.7rem;
-        }
-
-        @include mobile-xs {
-            padding: 5px 9px;
-            font-size: 0.66rem;
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         &:hover:not(.in-cart) {
-            background: $gold;
-            color: $bg-deep;
-            border-color: $gold;
-            transform: scale(1.06);
+            background: rgba(255, 255, 255, 0.06);
+            color: $text-primary;
+            border-color: $text-tertiary;
+            transform: scale(1.08);
         }
 
         &.in-cart {
             background: rgba(34, 197, 94, 0.15);
             border-color: $success;
             color: $success;
-            font-weight: 700;
-            min-width: 36px;
-            padding: 6px 10px;
-
-            span { display: none; }
-
-            i {
-                display: inline-block;
-                font-size: 0.95rem;
-            }
-
-            @include mobile {
-                min-width: 32px;
-                padding: 6px 9px;
-                i { font-size: 0.85rem; }
-            }
         }
     }
 }
