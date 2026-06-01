@@ -107,12 +107,6 @@
                                     <span class="name" t-esc="share.partner_id.name.title() if share.partner_id.name else ''"/>
                                 </div>
                             </div>
-
-                            <button id="cart-toggle" class="btn-cart" type="button">
-                                <i class="fa fa-shopping-bag"></i>
-                                <span class="d-none d-md-inline">Carrito</span>
-                                <span id="cart-count" class="badge">0</span>
-                            </button>
                         </div>
 
                     </div>
