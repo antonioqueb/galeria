@@ -75,8 +75,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     50% { opacity: 0.5; transform: scale(0.85); }
 }
 @keyframes ripple {
-    0% { transform: scale(0); opacity: 1; }
-    100% { transform: scale(4); opacity: 0; }
+    0% { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(1.1); opacity: 0; }
 }
 @keyframes shimmerLine {
     0% { left: -100%; }
@@ -2021,17 +2021,17 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
    ============================================================ */
 .contact-fab {
     position: fixed;
-    bottom: 90px;
+    bottom: 110px;
     right: 26px;
     z-index: 800;
 
     @include mobile {
-        bottom: 84px;
+        bottom: 104px;
         right: 16px;
     }
 
     @include mobile-xs {
-        bottom: 80px;
+        bottom: 98px;
         right: 12px;
     }
 
@@ -2062,11 +2062,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         &::before {
             content: '';
             position: absolute;
-            inset: -4px;
+            inset: 0;
             border-radius: 50%;
-            border: 2px solid #25D366;
+            border: 1.5px solid #25D366;
             opacity: 0;
             animation: ripple 2.4s infinite;
+            pointer-events: none;
         }
     }
 
