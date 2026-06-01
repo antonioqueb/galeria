@@ -126,82 +126,9 @@
                         </div>
 
                         <h1 class="hero-title">
-                            Material curado para
+                            Material exclusivo para
                             <span class="client-highlight" t-field="share.partner_id.name"/>
                         </h1>
-
-                        <p class="hero-subtitle">
-                            Catálogo armado exclusivamente con placas <strong>disponibles al momento</strong> de generar el enlace.
-                            Al apartar, las piezas quedan retenidas temporalmente para evitar que otro cliente las tome.
-                        </p>
-
-                        <div class="hero-stats">
-
-                            <div class="stat-card accent">
-                                <div class="stat-label">
-                                    <i class="fa fa-layer-group"></i>
-                                    Placas disponibles
-                                </div>
-                                <div class="stat-value">
-                                    <span class="number"><t t-esc="total_pieces"/></span>
-                                    <span class="unit">pzas</span>
-                                </div>
-                            </div>
-
-                            <div class="stat-card">
-                                <div class="stat-label">
-                                    <i class="fa fa-ruler-combined"></i>
-                                    Metros totales
-                                </div>
-                                <div class="stat-value">
-                                    <span class="number"><t t-esc="'%.2f' % total_area"/></span>
-                                    <span class="unit">m²</span>
-                                </div>
-                            </div>
-
-                            <div class="stat-card">
-                                <div class="stat-label">
-                                    <i class="fa fa-folder-open"></i>
-                                    Categorías
-                                </div>
-                                <div class="stat-value">
-                                    <span class="number"><t t-esc="categories_count"/></span>
-                                </div>
-                            </div>
-
-                            <div class="stat-card urgent">
-                                <div class="stat-label">
-                                    <i class="fa fa-hourglass-half"></i>
-                                    Vigencia
-                                </div>
-                                <div class="stat-value">
-                                    <span class="number"><t t-esc="days_left"/></span>
-                                    <span class="unit">días</span>
-                                </div>
-                            </div>
-
-                            <div class="stat-card stat-extra">
-                                <div class="stat-label">
-                                    <i class="fa fa-square-poll-vertical"></i>
-                                    Promedio
-                                </div>
-                                <div class="stat-value">
-                                    <span class="number"><t t-esc="'%.2f' % avg_per_piece"/></span>
-                                    <span class="unit">m²/pza</span>
-                                </div>
-                            </div>
-
-                            <div class="stat-card stat-extra">
-                                <div class="stat-label">
-                                    <i class="fa fa-calendar-check"></i>
-                                    Generado
-                                </div>
-                                <div class="stat-value">
-                                    <span class="number"><t t-esc="created_date_str"/></span>
-                                </div>
-                            </div>
-
-                        </div>
 
                         <div class="hero-meta">
                             <div class="meta-item">
