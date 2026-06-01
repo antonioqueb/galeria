@@ -110,7 +110,7 @@
 
                             <button id="cart-toggle" class="btn-cart" type="button">
                                 <i class="fa fa-shopping-bag"></i>
-                                <span class="d-none d-md-inline">Selección</span>
+                                <span class="d-none d-md-inline">Carrito</span>
                                 <span id="cart-count" class="badge">0</span>
                             </button>
                         </div>
@@ -249,6 +249,7 @@
 
                                                 <button class="btn-add-cart" type="button">
                                                     <span>Apartar</span>
+                                                    <i class="fa fa-check"></i>
                                                 </button>
                                             </div>
 
@@ -320,7 +321,7 @@
                 <div class="cart-header">
                     <h3>
                         <i class="fa fa-shopping-bag"></i>
-                        Mi selección
+                        Mi carrito
                     </h3>
                     <button class="close-cart" type="button">&#215;</button>
                 </div>
@@ -364,9 +365,9 @@
             <!-- =====================================================
                  STICKY CTA MÓVIL
                  ===================================================== -->
-            <div id="sticky-cart-bar" class="sticky-cart-bar">
+            <div id="sticky-cart-bar" class="sticky-cart-bar visible">
                 <div class="summary">
-                    <span class="label">Selección actual</span>
+                    <span class="label">Carrito</span>
                     <span class="value">
                         <strong id="sticky-count">0</strong> placas ·
                         <strong id="sticky-area">0.00</strong> m²
@@ -375,7 +376,7 @@
 
                 <button id="sticky-open-cart" class="btn-open-cart" type="button">
                     <i class="fa fa-shopping-bag"></i>
-                    Ver
+                    Finalizar apartado
                 </button>
             </div>
 

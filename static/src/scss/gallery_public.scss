@@ -1253,26 +1253,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .selection-indicator {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: $gold;
-        color: $bg-deep;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.85rem;
-        font-weight: 800;
-        opacity: 0;
-        transform: scale(0.6);
-        transition: all 0.25s $ease-out;
-        z-index: 4;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-
-        @include mobile { width: 24px; height: 24px; font-size: 0.75rem; }
+        display: none !important;
     }
 
     .block-badge {
@@ -1444,7 +1425,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
         overflow: hidden;
 
-        i { display: none !important; }
+        i { display: none; }
 
         @media (min-width: 768px) {
             padding: 7px 15px;
@@ -1473,6 +1454,21 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             border-color: $success;
             color: $success;
             font-weight: 700;
+            min-width: 36px;
+            padding: 6px 10px;
+
+            span { display: none; }
+
+            i {
+                display: inline-block;
+                font-size: 0.95rem;
+            }
+
+            @include mobile {
+                min-width: 32px;
+                padding: 6px 9px;
+                i { font-size: 0.85rem; }
+            }
         }
     }
 }
@@ -1487,23 +1483,32 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     right: 0;
     background: rgba(10, 10, 10, 0.96);
     border-top: 1px solid $border-gold;
-    padding: 12px 16px;
+    padding: 12px 20px;
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
     z-index: 900;
-    transform: translateY(100%);
-    transition: transform 0.3s $ease-out;
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    gap: 16px;
     min-width: 0;
 
-    &.visible { transform: translateY(0); }
+    @include desktop {
+        padding: 14px 24px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
 
-    @include desktop { display: none; }
+        .summary {
+            flex: 0 1 auto;
+        }
+    }
 
     @include mobile-xs { padding: 10px 12px; gap: 8px; }
+
+    &.is-empty {
+        .summary .value { opacity: 0.55; }
+    }
 
     .summary {
         flex: 1 1 auto;
@@ -2025,7 +2030,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
    ============================================================ */
 .contact-fab {
     position: fixed;
-    bottom: 26px;
+    bottom: 90px;
     right: 26px;
     z-index: 800;
 

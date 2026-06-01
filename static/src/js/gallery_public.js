@@ -446,18 +446,15 @@ class GalleryApp {
 
         const stickyBar = document.getElementById('sticky-cart-bar');
         if (stickyBar) {
-            if (this.cart.length > 0) {
-                stickyBar.classList.add('visible');
+            stickyBar.classList.add('visible');
+            stickyBar.classList.toggle('is-empty', this.cart.length === 0);
 
-                const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0);
-                const sCount = document.getElementById('sticky-count');
-                const sArea = document.getElementById('sticky-area');
+            const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0);
+            const sCount = document.getElementById('sticky-count');
+            const sArea = document.getElementById('sticky-area');
 
-                if (sCount) sCount.textContent = this.cart.length;
-                if (sArea) sArea.textContent = totalArea.toFixed(2);
-            } else {
-                stickyBar.classList.remove('visible');
-            }
+            if (sCount) sCount.textContent = this.cart.length;
+            if (sArea) sArea.textContent = totalArea.toFixed(2);
         }
 
         document.querySelectorAll('.bento-item').forEach(el => {
