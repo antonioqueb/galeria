@@ -12,7 +12,7 @@
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
                 <title t-esc="title or 'Galería de Placas'"/>
 
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Cormorant+Garamond:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 
                 <t t-call-assets="web.assets_frontend" t-js="false"/>
@@ -21,9 +21,12 @@
                     body {
                         margin: 0;
                         padding: 0;
-                        background-color: #121212;
+                        background-color: #0f0f10;
                         color: #e0e0e0;
                         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                        font-feature-settings: 'cv11' on, 'ss01' on, 'ss03' on;
+                        -webkit-font-smoothing: antialiased;
+                        -moz-osx-font-smoothing: grayscale;
                         overflow-x: hidden;
                     }
                     a {
@@ -82,7 +85,8 @@
 
                             <div class="brand">
                                 <span class="brand-row">
-                                    SOM <span class="light">GALLERY</span>
+                                    <img src="/galeria/static/description/logosom.png" alt="SOM" class="brand-logo"/>
+                                    <span class="light">GALLERY</span>
                                 </span>
                                 <span class="brand-sub">
                                     Catálogo exclusivo de placas seleccionadas

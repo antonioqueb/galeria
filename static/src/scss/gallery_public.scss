@@ -105,12 +105,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         width: 96%;
         max-width: 2400px;
         margin: 0 auto;
-        padding: 0 12px;
+        padding: 0 20px;
         gap: 16px;
         min-width: 0;
 
-        @include mobile { gap: 8px; padding: 0 10px; }
-        @include mobile-xs { gap: 6px; padding: 0 8px; }
+        @include mobile { gap: 8px; padding: 0 14px; }
+        @include mobile-xs { gap: 6px; padding: 0 12px; }
     }
 
     .brand-area {
@@ -178,15 +178,20 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     .brand {
         display: flex;
         flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
         line-height: 1;
         min-width: 0;
         flex: 1 1 auto;
         overflow: hidden;
 
         .brand-row {
-            font-size: 1.15rem;
-            font-weight: 700;
-            letter-spacing: 3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
             color: $text-primary;
             white-space: nowrap;
             overflow: hidden;
@@ -194,24 +199,38 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             max-width: 100%;
 
             @include mobile {
-                font-size: 0.82rem;
-                letter-spacing: 1.5px;
+                font-size: 0.85rem;
+                letter-spacing: 0.03em;
+                gap: 7px;
             }
 
             @include mobile-xs {
-                font-size: 0.72rem;
-                letter-spacing: 1px;
+                font-size: 0.75rem;
+                letter-spacing: 0.02em;
+                gap: 6px;
             }
 
-            .light { font-weight: 300; color: $gold; }
+            .brand-logo {
+                height: 28px;
+                width: auto;
+                display: block;
+                flex-shrink: 0;
+                object-fit: contain;
+
+                @include mobile { height: 22px; }
+                @include mobile-xs { height: 20px; }
+            }
+
+            .light { font-weight: 300; color: $gold; letter-spacing: 0.06em; }
         }
 
         .brand-sub {
             font-size: 0.66rem;
             color: $text-tertiary;
-            letter-spacing: 1.5px;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
-            margin-top: 4px;
+            margin-top: 6px;
+            text-align: left;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -219,8 +238,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
             @include mobile {
                 font-size: 0.56rem;
-                letter-spacing: 0.8px;
-                margin-top: 2px;
+                letter-spacing: 0.08em;
+                margin-top: 4px;
             }
 
             @include mobile-xs { display: none; }
@@ -431,16 +450,16 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.04));
-        border: 1px solid $border-gold;
-        color: $gold-light;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: $text-secondary;
         padding: 7px 16px 7px 14px;
         border-radius: 999px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1.6px;
-        margin-bottom: 22px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: 0;
+        margin-bottom: 26px;
         animation: fadeInUp 0.5s $ease-out;
         position: relative;
         max-width: 100%;
@@ -449,10 +468,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         text-overflow: ellipsis;
 
         @include mobile {
-            font-size: 0.62rem;
+            font-size: 0.66rem;
             padding: 5px 12px 5px 11px;
-            margin-bottom: 14px;
-            letter-spacing: 1px;
+            margin-bottom: 16px;
             gap: 7px;
         }
 
@@ -472,13 +490,13 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
     /* ===== Título principal — wrap inteligente ===== */
     .hero-title {
-        font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-        font-size: clamp(1.8rem, 3.6vw, 3rem);
-        font-weight: 400;
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: clamp(1.9rem, 3.8vw, 3.2rem);
+        font-weight: 300;
         color: $text-primary;
-        line-height: 1.15;
-        letter-spacing: -0.8px;
-        margin: 0 0 14px;
+        line-height: 1.12;
+        letter-spacing: -0.035em;
+        margin: 0 0 16px;
         animation: fadeInUp 0.6s 0.05s $ease-out backwards;
         max-width: 900px;
 
@@ -489,24 +507,25 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         -ms-hyphens: auto;
 
         @include mobile {
-            font-size: 1.5rem;
-            line-height: 1.18;
-            letter-spacing: -0.4px;
-            margin-bottom: 10px;
+            font-size: 1.6rem;
+            line-height: 1.15;
+            letter-spacing: -0.025em;
+            margin-bottom: 12px;
         }
 
         @include mobile-xs {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
         }
 
         .client-highlight {
             color: $gold;
-            font-style: italic;
-            font-weight: 500;
+            font-style: normal;
+            font-weight: 600;
             display: inline;
             position: relative;
-            background: linear-gradient(180deg, transparent 65%, rgba(212, 175, 55, 0.08) 65%);
-            padding: 0 2px;
+            background: none;
+            padding: 0;
+            letter-spacing: -0.02em;
 
             word-break: normal;
             overflow-wrap: break-word;
@@ -964,31 +983,32 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .category-title {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.6rem;
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 1.45rem;
     font-weight: 500;
     color: $text-primary;
-    margin: 0 0 22px;
+    margin: 0 0 24px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    letter-spacing: 0.5px;
+    gap: 18px;
+    letter-spacing: -0.02em;
     min-width: 0;
 
     @include mobile {
-        font-size: 1.1rem;
-        margin-bottom: 14px;
-        gap: 10px;
+        font-size: 1.05rem;
+        margin-bottom: 16px;
+        gap: 12px;
+        letter-spacing: -0.015em;
     }
 
     @include mobile-xs {
-        font-size: 1rem;
-        gap: 8px;
+        font-size: 0.98rem;
+        gap: 10px;
     }
 
     .cat-name {
         position: relative;
-        padding-right: 16px;
+        padding-right: 14px;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -999,10 +1019,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             content: '';
             position: absolute;
             right: 0;
-            bottom: -6px;
-            width: 24px;
-            height: 2px;
+            bottom: -4px;
+            width: 18px;
+            height: 1px;
             background: $gold;
+            opacity: 0.7;
         }
     }
 
@@ -1705,11 +1726,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
         h3 {
             margin: 0;
-            font-family: 'Cormorant Garamond', Georgia, serif;
-            font-size: 1.35rem;
-            font-weight: 500;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
             color: #fff;
-            letter-spacing: 0.5px;
+            letter-spacing: -0.02em;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -2092,14 +2113,15 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     @include mobile { padding: 50px 16px; }
 
     h1 {
-        font-family: 'Cormorant Garamond', Georgia, serif;
-        font-size: 3rem;
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 2.4rem;
         color: $gold;
-        margin: 0 0 12px;
+        margin: 0 0 14px;
         font-weight: 500;
+        letter-spacing: -0.03em;
 
-        @include mobile { font-size: 2rem; }
-        @include mobile-xs { font-size: 1.7rem; }
+        @include mobile { font-size: 1.75rem; }
+        @include mobile-xs { font-size: 1.55rem; }
     }
 
     p {
