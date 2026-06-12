@@ -155,7 +155,7 @@
                     </div>
 
                     <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Ancho mín. (m)</label>
+                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Largo mín. (m)</label>
                         <input type="number" class="form-control form-control-sm" placeholder="Ej: 2.0"
                                t-att-value="state.filters.ancho_min"
                                t-on-input="(ev) => this.onTextFilterChange('ancho_min', ev)"
