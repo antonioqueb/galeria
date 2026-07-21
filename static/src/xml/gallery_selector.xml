@@ -109,7 +109,7 @@
                      t-att-class="'row g-2 align-items-end mt-1' + (state.mobileFiltersOpen ? '' : ' d-none d-md-flex')">
 
                     <div class="col-6 col-md-1">
-                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Espesor</label>
+                        <label class="form-label form-label-sm mb-1 fw-bold text-uppercase text-muted small d-none d-md-block">Grosor</label>
                         <select class="form-select form-select-sm"
                                 t-model="state.filters.grosor"
                                 t-on-change="(ev) => this.onFilterChange('grosor', ev)">
