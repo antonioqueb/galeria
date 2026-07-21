@@ -5,6 +5,7 @@ import { Component, useState, onWillStart, useRef, xml } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { Dialog } from "@web/core/dialog/dialog";
 import { useDebounced } from "@web/core/utils/timing";
+import { SearchBar } from "@inventory_visual_enhanced/components/search_bar/search_bar";
 
 // --- Componente Modal ---
 class CreateLinkDialog extends Component {
@@ -149,13 +150,16 @@ export class GallerySelector extends Component {
                 product_name: '',
                 almacen_id: '',
                 ubicacion_id: '',
+                stock_mode: 'stock',
                 tipo: '',
                 categoria_name: '',
                 grupo: '',
                 marca: '',
+                acabado: '',
                 grosor: '',
                 numero_serie: '',
                 bloque: '',
+                cantidad_min_bloque: '',
                 pedimento: '',
                 contenedor: '',
                 atado: '',
@@ -195,9 +199,26 @@ export class GallerySelector extends Component {
                 this.state.currentCompanyId = await this.orm.call("gallery.share", "get_current_company", []);
             } catch (e) { console.error("Error company:", e); }
 
-            await this.loadFilterOptions();
             await this.loadImages();
         });
+    }
+
+    // =========================================================
+    //  BÚSQUEDA DESDE EL SEARCHBAR (componente del inventario visual)
+    // =========================================================
+
+    onSearchBar(filters) {
+        if (!filters) {
+            // Limpiar: mismo comportamiento que el botón del inventario visual.
+            Object.keys(this.state.filters).forEach(k => {
+                this.state.filters[k] = k === 'stock_mode' ? 'stock' : '';
+            });
+            this.state.activeBlock = null;
+        } else {
+            Object.assign(this.state.filters, filters);
+        }
+        // El SearchBar ya aplica su propio debounce/mínimo de caracteres.
+        this.loadImages();
     }
 
     // =========================================================
@@ -342,12 +363,36 @@ export class GallerySelector extends Component {
             const f = this.state.filters;
 
             // --- Dominio base para stock.quant ---
-            const quantDomain = [
-                ['location_id.usage', '=', 'internal'],
-                ['quantity', '>', 0],
-                ['reserved_quantity', '=', 0],  
-                ['x_tiene_hold', '=', false]    
-            ];
+            // Modo Inventario (mismo selector que el inventario visual):
+            // 'stock' = existencias internas libres; 'transit' = material en
+            // tránsito SIN asignación (lo asignado a un pedido no se ofrece).
+            const inTransit = f.stock_mode === 'transit';
+            const quantDomain = inTransit
+                ? [
+                    ['location_id.usage', '=', 'transit'],
+                    ['quantity', '>', 0],
+                    ['x_tiene_hold', '=', false],
+                ]
+                : [
+                    ['location_id.usage', '=', 'internal'],
+                    ['quantity', '>', 0],
+                    ['reserved_quantity', '=', 0],
+                    ['x_tiene_hold', '=', false],
+                ];
+
+            if (inTransit) {
+                try {
+                    const reservedLines = await this.orm.searchRead(
+                        "stock.transit.line",
+                        [['allocation_status', '=', 'reserved'], ['lot_id', '!=', false]],
+                        ["lot_id"], { limit: 5000 }
+                    );
+                    const reservedLotIds = [...new Set(reservedLines.map(l => l.lot_id[0]))];
+                    if (reservedLotIds.length) {
+                        quantDomain.push(['lot_id', 'not in', reservedLotIds]);
+                    }
+                } catch (e) { /* módulo de tránsito ausente: sin exclusión extra */ }
+            }
 
             if (this.state.currentCompanyId) {
                 quantDomain.unshift(['company_id', '=', this.state.currentCompanyId]);
@@ -376,9 +421,13 @@ export class GallerySelector extends Component {
                 if (f.categoria_name && f.categoria_name.trim()) {
                     quantDomain.push(['product_id.categ_id.name', 'ilike', f.categoria_name.trim()]);
                 }
-                // Grupo (bloque)
-                if (f.grupo && f.grupo.trim()) {
-                    quantDomain.push(['lot_id.x_bloque', 'ilike', f.grupo.trim()]);
+                // Grupo / tono (selection del quant, igual que el inventario visual)
+                if (f.grupo && String(f.grupo).trim()) {
+                    quantDomain.push(['x_grupo', '=', f.grupo]);
+                }
+                // Acabado
+                if (f.acabado && String(f.acabado).trim()) {
+                    quantDomain.push(['x_acabado', '=', f.acabado]);
                 }
                 // Grosor/Espesor
                 if (f.grosor) {
@@ -428,25 +477,58 @@ export class GallerySelector extends Component {
             }
 
             const validQuants = await this.orm.searchRead(
-                "stock.quant", quantDomain, ["lot_id", "product_id"], { limit: 2000 }
+                "stock.quant", quantDomain, ["lot_id", "product_id", "quantity"], { limit: 2000 }
             );
 
             let validLotIds = validQuants.map(q => q.lot_id[0]);
 
-            // Filtro de precios (post-query sobre product.template)
-            if ((f.price_min || f.price_max) && f.price_currency && f.price_level) {
-                const priceField = `x_price_${f.price_currency.toLowerCase()}_${f.price_level === 'high' ? '1' : '2'}`;
+            // Cant. mínima por bloque (m²): igual que el inventario visual,
+            // se suma la existencia del bloque completo y se descartan los
+            // bloques por debajo del mínimo.
+            if (f.cantidad_min_bloque && parseFloat(f.cantidad_min_bloque) > 0) {
+                try {
+                    const minQty = parseFloat(f.cantidad_min_bloque);
+                    const lotsBloque = await this.orm.read(
+                        "stock.lot", validLotIds, ["id", "x_bloque"]
+                    );
+                    const bloqueByLot = {};
+                    lotsBloque.forEach(l => { bloqueByLot[l.id] = l.x_bloque || ''; });
+                    const sumByBloque = {};
+                    validQuants.forEach(q => {
+                        const b = bloqueByLot[q.lot_id[0]] || '';
+                        sumByBloque[b] = (sumByBloque[b] || 0) + (q.quantity || 0);
+                    });
+                    validLotIds = validLotIds.filter(
+                        id => (sumByBloque[bloqueByLot[id] || ''] || 0) >= minQty
+                    );
+                } catch (e) { console.error("Error filtro cant. mín. bloque:", e); }
+            }
+
+            // Filtro de precios: MISMA semántica que el inventario visual —
+            // divisa (USD por defecto) + rango; el producto pasa si CUALQUIERA
+            // de sus niveles de precio cae dentro del rango.
+            if (f.price_min || f.price_max) {
+                const cur = (f.price_currency || 'USD').toLowerCase();
+                const priceFields = [1, 2, 3].map(n => `x_price_${cur}_${n}`);
                 const productIds = [...new Set(validQuants.map(q => q.product_id[0]))];
-                
-                const priceFilters = [['id', 'in', productIds]];
-                if (f.price_min) priceFilters.push([priceField, '>=', parseFloat(f.price_min)]);
-                if (f.price_max) priceFilters.push([priceField, '<=', parseFloat(f.price_max)]);
+                const minV = f.price_min ? parseFloat(f.price_min) : null;
+                const maxV = f.price_max ? parseFloat(f.price_max) : null;
 
                 try {
-                    const matchedProducts = await this.orm.searchRead(
-                        "product.product", priceFilters, ["id"], { limit: 2000 }
+                    const prods = await this.orm.read(
+                        "product.product", productIds, ["id"].concat(priceFields)
                     );
-                    const matchedProductIds = new Set(matchedProducts.map(p => p.id));
+                    const matchedProductIds = new Set();
+                    prods.forEach(pr => {
+                        const ok = priceFields.some(fld => {
+                            const v = pr[fld];
+                            if (!v && v !== 0) return false;
+                            if (minV !== null && v < minV) return false;
+                            if (maxV !== null && v > maxV) return false;
+                            return true;
+                        });
+                        if (ok) matchedProductIds.add(pr.id);
+                    });
                     const filteredQuants = validQuants.filter(q => matchedProductIds.has(q.product_id[0]));
                     validLotIds = filteredQuants.map(q => q.lot_id[0]);
                 } catch(e) {
@@ -619,4 +701,5 @@ export class GallerySelector extends Component {
 }
 
 GallerySelector.template = "galeria.GallerySelector";
+GallerySelector.components = { SearchBar };
 registry.category("actions").add("galeria.selector_dashboard", GallerySelector);
