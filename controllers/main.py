@@ -57,6 +57,33 @@ class GalleryController(http.Controller):
             ], limit=1)
 
             if not quant:
+                # Reserva DÉBIL: si la placa solo está retenida por un
+                # traslado interno de carrito/escáner ABIERTO (reacomodo de
+                # ubicación), sigue vendible y debe mostrarse en la galería;
+                # esa reserva se libera sola al crear la venta.
+                candidate = StockQuant.search([
+                    ('lot_id', '=', lot.id),
+                    ('company_id', '=', share.company_id.id),
+                    ('location_id.usage', '=', 'internal'),
+                    ('quantity', '>', 0),
+                    ('reserved_quantity', '>', 0),
+                    ('x_tiene_hold', '=', False)
+                ], limit=1)
+                if candidate:
+                    weak_lines = request.env['stock.move.line'].sudo().search([
+                        ('product_id', '=', candidate.product_id.id),
+                        ('lot_id', '=', lot.id),
+                        ('location_id', '=', candidate.location_id.id),
+                        ('state', 'in', ('assigned', 'partially_available')),
+                        ('picking_id.picking_type_code', '=', 'internal'),
+                        ('picking_id.origin', '=like', 'Carrito - %'),
+                        ('picking_id.state', 'not in', ('done', 'cancel')),
+                    ])
+                    weak_reserved = sum(weak_lines.mapped('quantity'))
+                    if weak_reserved >= (candidate.reserved_quantity or 0.0):
+                        quant = candidate
+
+            if not quant:
                 continue
 
             alto = getattr(lot, 'x_alto', 0.0) or 0.0

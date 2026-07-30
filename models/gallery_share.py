@@ -517,6 +517,22 @@ class GalleryShare(models.Model):
             if quant.lot_id.id in processed_lot_ids:
                 continue
 
+            if quant.reserved_quantity > 0:
+                # Antes de rechazar: si la reserva viene de un traslado
+                # interno de carrito/escáner abierto (reserva DÉBIL de
+                # reacomodo, no un compromiso comercial), se libera sola y
+                # se recalcula. Helper de inventory_shopping_cart; hasattr
+                # por si no está instalado.
+                Picking = self.env['stock.picking'].sudo()
+                if hasattr(Picking, '_release_cart_internal_reservations'):
+                    released = Picking._release_cart_internal_reservations(
+                        [quant.lot_id.id],
+                        reason='Liberado automáticamente: el lote se vendió '
+                               'desde una galería compartida.',
+                    )
+                    if released:
+                        quant.invalidate_recordset()
+
             if quant.reserved_quantity > 0 or quant.x_tiene_hold:
                 raise UserError(
                     f"El lote {quant.lot_id.name} ya no está disponible. "
