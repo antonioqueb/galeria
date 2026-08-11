@@ -7,6 +7,8 @@
         <field name="arch" type="xml">
             <form string="Catálogo Compartido">
                 <header>
+                    <button name="action_send_whatsapp" string="Enviar por WhatsApp" type="object"
+                            class="btn-success" icon="fa-whatsapp"/>
                     <button name="action_send_email" string="Enviar por Correo" type="object" class="btn-primary"/>
                     <button name="action_regenerate_token" string="Regenerar Link" type="object" confirm="El link anterior dejará de funcionar. ¿Continuar?"/>
                 </header>

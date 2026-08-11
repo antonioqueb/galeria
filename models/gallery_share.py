@@ -149,6 +149,46 @@ class GalleryShare(models.Model):
     # Acciones
     # =========================================================
 
+    def action_send_whatsapp(self):
+        """Envía el catálogo al CLIENTE por WhatsApp: saludo formal + liga +
+        instrucciones de uso + vigencia. Sin remitente (queda claro por el
+        número que envía). Mismo mecanismo que las ligas del portal."""
+        self.ensure_one()
+        if not self.share_url:
+            raise UserError('Este catálogo aún no tiene liga generada.')
+
+        partner = self.partner_id
+        number = self._clean_phone_digits(
+            (partner.phone or '') if partner else '')
+        if number and len(number) == 10:
+            number = '52' + number
+
+        vigencia = ''
+        if self.expiration_date:
+            vigencia = '\n\nEl catálogo está disponible hasta el %s.' % (
+                fields.Datetime.context_timestamp(
+                    self, self.expiration_date).strftime('%d/%m/%Y'))
+
+        saludo = 'Buen día%s:' % (
+            ' ' + partner.name if partner and partner.name else '')
+        message = (
+            '%s\n\n'
+            'Le compartimos su catálogo personalizado de materiales:\n\n'
+            '%s\n\n'
+            'Instrucciones:\n'
+            '1. Abra el enlace desde su celular o computadora.\n'
+            '2. Explore las placas con sus fotografías reales — puede '
+            'ampliarlas y verlas a detalle.\n'
+            '3. Si algún material le interesa, apártelo directamente desde '
+            'el catálogo o respóndanos por este medio.%s\n\n'
+            'Quedamos atentos a cualquier duda. Saludos cordiales.'
+        ) % (saludo, self.share_url, vigencia)
+
+        url = 'https://wa.me/%s?text=%s' % (number, quote(message, safe=''))
+        self.message_post(body='Catálogo enviado por WhatsApp%s.' % (
+            ' al %s' % number if number else ''))
+        return {'type': 'ir.actions.act_url', 'url': url, 'target': 'new'}
+
     def action_regenerate_token(self):
         for record in self:
             record.access_token = str(uuid.uuid4())
