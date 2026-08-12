@@ -102,7 +102,10 @@ class GalleryShare(models.Model):
                 vals['name'] = self.env['ir.sequence'].next_by_code('gallery.share') or 'CAT/0000'
 
             if not vals.get('expiration_date'):
-                vals['expiration_date'] = fields.Datetime.now() + timedelta(days=3)
+                # DOS MESES de vigencia: el catálogo se comparte con clientes
+                # que deciden con calma; expirar a los pocos días mataba
+                # ligas aún en uso comercial.
+                vals['expiration_date'] = fields.Datetime.now() + timedelta(days=60)
 
             if not vals.get('company_id'):
                 vals['company_id'] = self.env.company.id
