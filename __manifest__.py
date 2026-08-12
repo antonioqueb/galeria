@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Galería de Placas y Catálogo Compartido',
-    'version': '19.0.3.3.0',
+    'version': '19.0.3.4.0',
     'category': 'Sales/Sales',
     'summary': 'Selección visual de placas, carrito de reservas y catálogo público',
     'description': """
