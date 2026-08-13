@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from odoo.addons.galeria.models.som_date_format import som_format_date
 
 import logging
 
@@ -169,8 +170,8 @@ class GalleryShare(models.Model):
         vigencia = ''
         if self.expiration_date:
             vigencia = '\n\nEl catálogo está disponible hasta el %s.' % (
-                fields.Datetime.context_timestamp(
-                    self, self.expiration_date).strftime('%d/%m/%Y'))
+                som_format_date(fields.Datetime.context_timestamp(
+                    self, self.expiration_date)))
 
         saludo = 'Buen día%s:' % (
             ' ' + partner.name if partner and partner.name else '')

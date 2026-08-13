@@ -1,5 +1,37 @@
 // static/src/js/gallery_public.js
 
+// Formato único del sistema: "13 ago 2026". Arreglo manual de meses porque
+// toLocaleDateString('es-MX') devuelve "sept" (4 letras) y no respeta el
+// formato. Parsea la cadena SIN construir Date: new Date("2026-08-13") se
+// interpreta como UTC y en México mostraría el día ANTERIOR.
+const MESES_ES = ["ene", "feb", "mar", "abr", "may", "jun",
+                  "jul", "ago", "sep", "oct", "nov", "dic"];
+
+function somFormatDate(value, options) {
+    const opts = options || {};
+    const empty = opts.empty !== undefined ? opts.empty : "—";
+    if (!value) return empty;
+    let raw = "";
+    if (typeof value === "string") {
+        raw = value.trim();
+    } else if (value instanceof Date && !isNaN(value)) {
+        const p2 = (n) => String(n).padStart(2, "0");
+        raw = `${value.getFullYear()}-${p2(value.getMonth() + 1)}-${p2(value.getDate())}` +
+              ` ${p2(value.getHours())}:${p2(value.getMinutes())}`;
+    }
+    if (!raw) return empty;
+    const [datePart, timePart] = raw.split(/[ T]/);
+    const parts = datePart.split("-");
+    if (parts.length !== 3) return raw;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    if (!year || !month || !day || month < 1 || month > 12) return raw;
+    let out = `${String(day).padStart(2, "0")} ${MESES_ES[month - 1]} ${year}`;
+    if (opts.withTime && timePart) out += ` ${timePart.slice(0, 5)}`;
+    return out;
+}
+
 class GalleryApp {
     constructor() {
         this.cart = [];
@@ -701,12 +733,7 @@ class GalleryApp {
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 5);
 
-        const expiryStr = expiryDate.toLocaleDateString('es-MX', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        const expiryStr = somFormatDate(expiryDate);
 
         const totalArea = this.cart.reduce((s, i) => s + (i.area || 0), 0).toFixed(2);
         const totalCount = this.cart.length;
