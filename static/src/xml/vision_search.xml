@@ -96,8 +96,8 @@
             <button class="som_vision__cerrar" t-on-click="cerrarVisor">&#215;</button>
             <img class="som_vision__visor-img"
                  t-att-src="state.visor.imagen_grande or state.visor.imagen_url"
-                 t-on-click.stop=""/>
-            <div class="som_vision__visor-pie" t-on-click.stop="">
+                 t-on-click.stop="() => {}"/>
+            <div class="som_vision__visor-pie" t-on-click.stop="() => {}">
                 <span class="som_vision__visor-lote" t-esc="state.visor.lot_name"/>
                 <span t-if="state.visor.producto" class="som_vision__visor-prod"
                       t-esc="state.visor.producto"/>
