@@ -1,0 +1,309 @@
+// ══════════════════════════════════════════════════════════════
+// Buscador visual de materiales
+//
+// La foto manda: la retícula deja que las placas ocupen el espacio y todo
+// lo demás (tipografía, bordes, sombras) se mantiene discreto para no
+// competir con la piedra, que es lo que el vendedor le enseña al cliente.
+// ══════════════════════════════════════════════════════════════
+
+.som_vision {
+    $azul: #0b57d0;
+    $azul-claro: #2d74e0;
+    $texto: #14213a;
+    $texto2: #5b6b84;
+    $texto3: #93a1b7;
+    $borde: #e1e9f4;
+    $fondo: #f6f9fd;
+
+    padding: 28px 32px 48px;
+    background: $fondo;
+    min-height: 100%;
+    overflow-y: auto;
+
+    // ── Cabecera ──
+    &__cabecera {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    &__titulo {
+        font-size: 26px;
+        font-weight: 700;
+        color: $texto;
+        margin: 0 0 4px;
+    }
+
+    &__sub {
+        color: $texto2;
+        font-size: 14px;
+        margin: 0;
+        max-width: 46ch;
+        line-height: 1.5;
+    }
+
+    &__contador {
+        text-align: right;
+        white-space: nowrap;
+
+        &-num {
+            display: block;
+            font-size: 22px;
+            font-weight: 700;
+            color: $azul;
+            line-height: 1;
+        }
+
+        &-txt {
+            font-size: 11px;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            color: $texto3;
+        }
+    }
+
+    // ── Buscador ──
+    &__buscador {
+        display: grid;
+        grid-template-columns: 1fr 240px;
+        gap: 16px;
+        margin-bottom: 18px;
+
+        @media (max-width: 900px) {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__campo {
+        display: flex;
+        align-items: center;
+        background: #fff;
+        border: 1px solid $borde;
+        border-radius: 14px;
+        padding: 6px 6px 6px 16px;
+        transition: border-color .15s, box-shadow .15s;
+
+        &:focus-within {
+            border-color: $azul-claro;
+            box-shadow: 0 0 0 4px rgba(45, 116, 224, .12);
+        }
+    }
+
+    &__lupa {
+        color: $texto3;
+        margin-right: 12px;
+    }
+
+    &__input {
+        flex: 1;
+        border: 0;
+        outline: 0;
+        font-size: 15px;
+        color: $texto;
+        background: transparent;
+        padding: 12px 0;
+
+        &::placeholder { color: $texto3; }
+    }
+
+    &__btn {
+        border: 0;
+        background: $azul;
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 11px 22px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background .15s;
+
+        &:hover:not(:disabled) { background: #083e96; }
+        &:disabled { opacity: .5; cursor: default; }
+    }
+
+    // Zona de arrastre: discontinua para que se lea como "suelta algo aquí".
+    &__zona {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: #fff;
+        border: 2px dashed $borde;
+        border-radius: 14px;
+        cursor: pointer;
+        padding: 10px;
+        min-height: 74px;
+        transition: border-color .15s, background .15s;
+
+        &:hover { border-color: $azul-claro; }
+
+        &--activa {
+            border-color: $azul;
+            background: #e8f4fe;
+        }
+
+        &-icono { font-size: 20px; color: $texto3; }
+        &-txt { font-size: 12px; color: $texto2; text-align: center; }
+    }
+
+    &__mini {
+        max-height: 62px;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+
+    // ── Sugerencias ──
+    &__ejemplos {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 24px;
+
+        &-tit {
+            font-size: 13px;
+            color: $texto3;
+            margin-right: 4px;
+        }
+    }
+
+    &__chip {
+        border: 1px solid $borde;
+        background: #fff;
+        color: $texto2;
+        font-size: 13px;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all .15s;
+
+        &:hover {
+            border-color: $azul-claro;
+            color: $azul;
+            background: #e8f4fe;
+        }
+    }
+
+    // ── Estados ──
+    &__error,
+    &__vacio,
+    &__cargando {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        padding: 18px 20px;
+        border-radius: 12px;
+    }
+
+    &__error {
+        background: #feefef;
+        color: #e5484d;
+    }
+
+    &__vacio,
+    &__cargando {
+        justify-content: center;
+        flex-direction: column;
+        color: $texto2;
+        padding: 56px 20px;
+
+        i { font-size: 30px; color: $texto3; }
+    }
+
+    &__spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid $borde;
+        border-top-color: $azul;
+        border-radius: 50%;
+        animation: som_vision_giro .8s linear infinite;
+    }
+
+    // ── Resultados ──
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 18px;
+    }
+
+    &__tarjeta {
+        background: #fff;
+        border: 1px solid $borde;
+        border-radius: 16px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform .16s, box-shadow .16s;
+
+        &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px rgba(20, 33, 58, .13);
+        }
+    }
+
+    &__foto {
+        position: relative;
+        aspect-ratio: 4 / 3;
+        background: #eef3fa;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+    }
+
+    // Barra de parecido RELATIVO al mejor resultado. Deliberadamente sin
+    // número: el valor absoluto de CLIP no es comparable entre texto e
+    // imagen y un porcentaje se malinterpretaría.
+    &__medida {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, .45));
+    }
+
+    &__barra {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, .35);
+        overflow: hidden;
+
+        &-fill {
+            height: 100%;
+            background: #fff;
+            border-radius: 2px;
+        }
+    }
+
+    &__info {
+        padding: 12px 14px 14px;
+    }
+
+    &__lote {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+        color: $texto;
+    }
+
+    &__producto {
+        display: block;
+        font-size: 12px;
+        color: $texto2;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@keyframes som_vision_giro {
+    to { transform: rotate(360deg); }
+}

@@ -20,12 +20,16 @@
         'views/gallery_share_views.xml',
         'views/gallery_menus.xml',
         'views/gallery_public_template.xml',
+        'views/vision_menus.xml',
     ],
     'assets': {
         'web.assets_backend': [
             'galeria/static/src/js/gallery_selector.js',
             'galeria/static/src/xml/gallery_selector.xml',
             'galeria/static/src/scss/gallery_selector.scss',
+            'galeria/static/src/js/vision_search.js',
+            'galeria/static/src/xml/vision_search.xml',
+            'galeria/static/src/scss/vision_search.scss',
         ],
         'web.assets_frontend': [
             'galeria/static/src/scss/gallery_public.scss',

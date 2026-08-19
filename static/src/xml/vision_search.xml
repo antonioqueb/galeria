@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="galeria.VisionSearch">
+    <div class="som_vision">
+
+        <div class="som_vision__cabecera">
+            <div>
+                <h1 class="som_vision__titulo">Buscar material</h1>
+                <p class="som_vision__sub">
+                    Describe lo que buscas o arrastra una foto y encuentra los
+                    materiales que se le parecen.
+                </p>
+            </div>
+            <div t-if="state.indexadas" class="som_vision__contador">
+                <span class="som_vision__contador-num" t-esc="state.indexadas"/>
+                <span class="som_vision__contador-txt">fotos indexadas</span>
+            </div>
+        </div>
+
+        <div class="som_vision__buscador">
+            <div class="som_vision__campo">
+                <i class="fa fa-search som_vision__lupa"/>
+                <input type="text"
+                       class="som_vision__input"
+                       placeholder="mármol blanco con vetas grises…"
+                       t-model="state.consulta"
+                       t-on-keydown="onKeydown"/>
+                <button class="som_vision__btn"
+                        t-on-click="buscarTexto"
+                        t-att-disabled="state.cargando">Buscar</button>
+            </div>
+
+            <div class="som_vision__zona"
+                 t-att-class="{ 'som_vision__zona--activa': state.arrastrando }"
+                 t-on-click="abrirSelector"
+                 t-on-dragover="onDragOver"
+                 t-on-dragleave="onDragLeave"
+                 t-on-drop="onDrop">
+                <img t-if="state.miniatura" t-att-src="state.miniatura" class="som_vision__mini"/>
+                <t t-else="">
+                    <i class="fa fa-image som_vision__zona-icono"/>
+                    <span class="som_vision__zona-txt">Arrastra una foto o haz clic</span>
+                </t>
+            </div>
+            <input type="file" accept="image/*" class="d-none"
+                   t-ref="fileInput" t-on-change="onFileChange"/>
+        </div>
+
+        <div t-if="!state.buscado and !state.cargando" class="som_vision__ejemplos">
+            <span class="som_vision__ejemplos-tit">Prueba con:</span>
+            <button class="som_vision__chip" t-on-click="() => this.ejemplo('black granite')">granito negro</button>
+            <button class="som_vision__chip" t-on-click="() => this.ejemplo('white marble with grey veins')">mármol blanco vetado</button>
+            <button class="som_vision__chip" t-on-click="() => this.ejemplo('beige travertine')">travertino beige</button>
+            <button class="som_vision__chip" t-on-click="() => this.ejemplo('blue stone')">piedra azul</button>
+        </div>
+
+        <div t-if="state.error" class="som_vision__error">
+            <i class="fa fa-exclamation-triangle"/>
+            <span t-esc="state.error"/>
+        </div>
+
+        <div t-if="state.cargando" class="som_vision__cargando">
+            <div class="som_vision__spinner"/>
+            <span>Buscando materiales parecidos…</span>
+        </div>
+
+        <div t-if="!state.cargando and state.buscado and !state.resultados.length and !state.error"
+             class="som_vision__vacio">
+            <i class="fa fa-search"/>
+            <p>No encontramos materiales parecidos.</p>
+        </div>
+
+        <div t-if="!state.cargando and state.resultados.length" class="som_vision__grid">
+            <div t-foreach="state.resultados" t-as="r" t-key="r.lot_id"
+                 class="som_vision__tarjeta"
+                 t-on-click="() => this.abrirLote(r.lot_id)">
+                <div class="som_vision__foto">
+                    <img t-if="r.imagen_url" t-att-src="r.imagen_url" loading="lazy"/>
+                    <div class="som_vision__medida">
+                        <div class="som_vision__barra">
+                            <div class="som_vision__barra-fill"
+                                 t-att-style="'width:' + r.relativo + '%'"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="som_vision__info">
+                    <span class="som_vision__lote" t-esc="r.lot_name"/>
+                    <span t-if="r.producto" class="som_vision__producto" t-esc="r.producto"/>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</t>
+
+</templates>

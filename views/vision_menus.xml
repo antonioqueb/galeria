@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Acción de cliente: el buscador visual (componente OWL) -->
+    <record id="action_vision_search" model="ir.actions.client">
+        <field name="name">Buscar material</field>
+        <field name="tag">galeria.vision_search</field>
+    </record>
+
+    <!-- Menú raíz propio, con icono SVG -->
+    <menuitem id="menu_vision_root"
+              name="Buscador Visual"
+              web_icon="galeria,static/description/icon_vision.svg"
+              sequence="21"/>
+
+    <menuitem id="menu_vision_search"
+              name="Buscar material"
+              parent="menu_vision_root"
+              action="action_vision_search"
+              sequence="1"/>
+
+</odoo>
