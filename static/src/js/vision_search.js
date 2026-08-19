@@ -1,8 +1,8 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { Component, useState, onWillStart, useRef } from "@odoo/owl";
-import { useService, useExternalListener } from "@web/core/utils/hooks";
+import { Component, useState, onWillStart, useRef, useExternalListener } from "@odoo/owl";
+import { useService } from "@web/core/utils/hooks";
 // Odoo 19: rpc dejó de ser un servicio de useService y se importa directo.
 import { rpc } from "@web/core/network/rpc";
 
