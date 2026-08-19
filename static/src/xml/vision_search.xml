@@ -74,7 +74,7 @@
         <div t-if="!state.cargando and state.resultados.length" class="som_vision__grid">
             <div t-foreach="state.resultados" t-as="r" t-key="r.lot_id"
                  class="som_vision__tarjeta"
-                 t-on-click="() => this.abrirLote(r.lot_id)">
+                 t-on-click="() => this.abrirVisor(r)">
                 <div class="som_vision__foto">
                     <img t-if="r.imagen_url" t-att-src="r.imagen_url" loading="lazy"/>
                     <div class="som_vision__medida">
@@ -88,6 +88,19 @@
                     <span class="som_vision__lote" t-esc="r.lot_name"/>
                     <span t-if="r.producto" class="som_vision__producto" t-esc="r.producto"/>
                 </div>
+            </div>
+        </div>
+
+        <!-- Visor: la foto en grande, que es lo unico que se quiere ver -->
+        <div t-if="state.visor" class="som_vision__visor" t-on-click="cerrarVisor">
+            <button class="som_vision__cerrar" t-on-click="cerrarVisor">&#215;</button>
+            <img class="som_vision__visor-img"
+                 t-att-src="state.visor.imagen_grande or state.visor.imagen_url"
+                 t-on-click.stop=""/>
+            <div class="som_vision__visor-pie" t-on-click.stop="">
+                <span class="som_vision__visor-lote" t-esc="state.visor.lot_name"/>
+                <span t-if="state.visor.producto" class="som_vision__visor-prod"
+                      t-esc="state.visor.producto"/>
             </div>
         </div>
 

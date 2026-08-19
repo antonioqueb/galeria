@@ -2,7 +2,7 @@
 
 import { registry } from "@web/core/registry";
 import { Component, useState, onWillStart, useRef } from "@odoo/owl";
-import { useService } from "@web/core/utils/hooks";
+import { useService, useExternalListener } from "@web/core/utils/hooks";
 // Odoo 19: rpc dejó de ser un servicio de useService y se importa directo.
 import { rpc } from "@web/core/network/rpc";
 
@@ -25,7 +25,6 @@ export class VisionSearch extends Component {
     static props = ["*"];
 
     setup() {
-        this.action = useService("action");
         this.notification = useService("notification");
         this.fileInput = useRef("fileInput");
 
@@ -36,8 +35,17 @@ export class VisionSearch extends Component {
             buscado: false,
             arrastrando: false,
             miniatura: null,
+            visor: null,
             indexadas: null,
             error: null,
+        });
+
+        // Escape cierra el visor: es lo que espera cualquiera con una foto
+        // abierta a pantalla completa.
+        useExternalListener(window, "keydown", (ev) => {
+            if (ev.key === "Escape" && this.state.visor) {
+                this.cerrarVisor();
+            }
         });
 
         onWillStart(async () => {
@@ -144,17 +152,12 @@ export class VisionSearch extends Component {
         }
     }
 
-    abrirLote(lotId) {
-        if (!lotId) {
-            return;
-        }
-        this.action.doAction({
-            type: "ir.actions.act_window",
-            res_model: "stock.lot",
-            res_id: lotId,
-            views: [[false, "form"]],
-            target: "current",
-        });
+    abrirVisor(resultado) {
+        this.state.visor = resultado;
+    }
+
+    cerrarVisor() {
+        this.state.visor = null;
     }
 
     ejemplo(texto) {

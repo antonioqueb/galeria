@@ -53,7 +53,10 @@ def _enriquecer(resultados):
             'lot_id': r.get('lot_id'),
             'lot_name': r.get('lot_name') or (lote.name if lote else ''),
             'producto': lote.product_id.display_name if lote and lote.product_id else '',
-            'imagen_url': '/web/image/stock.lot.image/%s/image' % img_id if img_id else '',
+            # Miniatura para la retícula e imagen completa para el visor:
+            # 24 fotos a tamaño real serían decenas de MB por búsqueda.
+            'imagen_url': '/web/image/stock.lot.image/%s/image_small' % img_id if img_id else '',
+            'imagen_grande': '/web/image/stock.lot.image/%s/image' % img_id if img_id else '',
             # Relativo al mejor resultado: el valor absoluto de CLIP no es
             # comparable entre texto e imagen (texto ronda 0.3, imagen 0.8),
             # así que mostrarlo como porcentaje confundiría al usuario.
@@ -99,12 +102,25 @@ class SomVisionController(http.Controller):
         archivo = request.httprequest.files.get('foto')
         if not archivo:
             return request.make_json_response({'ok': False, 'error': 'Falta la imagen'})
+        # Se leen los BYTES, no se reenvía archivo.stream: Odoo ya consumió ese
+        # flujo al parsear el formulario, así que llegaba vacío al servicio de
+        # visión y respondía 400 "la imagen no es legible".
+        contenido = archivo.read()
+        if not contenido:
+            return request.make_json_response(
+                {'ok': False, 'error': 'La imagen llegó vacía'}
+            )
+
         try:
             limite = int(kw.get('limite') or 24)
             r = requests.post(
                 '%s/buscar' % _base_url(),
                 params={'limite': limite},
-                files={'foto': (archivo.filename, archivo.stream, archivo.mimetype)},
+                files={'foto': (
+                    archivo.filename or 'consulta.jpg',
+                    contenido,
+                    archivo.mimetype or 'image/jpeg',
+                )},
                 timeout=TIMEOUT,
             )
             r.raise_for_status()
