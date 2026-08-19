@@ -19,7 +19,10 @@ import { rpc } from "@web/core/network/rpc";
  */
 export class VisionSearch extends Component {
     static template = "galeria.VisionSearch";
-    static props = {};
+    // Odoo inyecta props propias a las acciones de cliente (action, actionId,
+    // className, globalState...). Con props = {} OWL las rechaza y el
+    // componente falla al renderizar.
+    static props = ["*"];
 
     setup() {
         this.action = useService("action");
