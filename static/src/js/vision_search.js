@@ -111,8 +111,12 @@ export class VisionSearch extends Component {
     }
 
     async buscarImagen(archivo) {
-        if (!archivo.type.startsWith("image/")) {
-            this.notification.add("Ese archivo no es una imagen", { type: "warning" });
+        // No se filtra por tipo MIME: algunos sistemas entregan HEIC y AVIF con
+        // type vacío y se rechazaban antes de enviarlos. El servicio reconoce
+        // 75 formatos y responde con un mensaje claro si no puede leerlo, así
+        // que dejamos que decida él.
+        if (archivo.type && !archivo.type.startsWith("image/")) {
+            this.notification.add("Ese archivo no parece una imagen", { type: "warning" });
             return;
         }
         this.state.cargando = true;

@@ -162,6 +162,18 @@ class SomVisionController(http.Controller):
             r.raise_for_status()
             datos = _enriquecer(r.json().get('resultados', []))
             return request.make_json_response({'ok': True, 'resultados': datos})
+        except requests.HTTPError as exc:
+            # El servicio explica el motivo (formato no admitido, etc.);
+            # mostrarlo es más útil que un genérico.
+            detalle = ''
+            try:
+                detalle = (exc.response.json() or {}).get('detail', '')
+            except Exception:  # noqa: BLE001
+                pass
+            _logger.warning('Búsqueda por imagen falló: %s | %s', exc, detalle)
+            return request.make_json_response(
+                {'ok': False, 'error': detalle or 'No se pudo procesar la imagen'}
+            )
         except Exception as exc:  # noqa: BLE001
             _logger.warning('Búsqueda por imagen falló: %s', exc)
             return request.make_json_response(
