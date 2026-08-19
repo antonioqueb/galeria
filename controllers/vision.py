@@ -111,18 +111,54 @@ class SomVisionController(http.Controller):
                 {'ok': False, 'error': 'La imagen llegó vacía'}
             )
 
+        # NORMALIZACIÓN A JPEG antes de reenviar: el navegador puede mandar
+        # WEBP, HEIC, PNG con alfa o CMYK y el servicio de visión respondía
+        # 400 'imagen no legible'. Transcodificando aquí, el servicio recibe
+        # siempre lo mismo. OJO Odoo 19 anula Image.init() dentro del
+        # worker: los plugins de Pillow se importan EXPLÍCITOS o el open()
+        # truena con UnidentifiedImageError aunque la librería los tenga.
+        try:
+            import io
+            from PIL import Image
+            import PIL.JpegImagePlugin   # noqa: F401
+            import PIL.PngImagePlugin    # noqa: F401
+            import PIL.WebPImagePlugin   # noqa: F401
+            import PIL.GifImagePlugin    # noqa: F401
+            import PIL.BmpImagePlugin    # noqa: F401
+            import PIL.TiffImagePlugin   # noqa: F401
+
+            img = Image.open(io.BytesIO(contenido))
+            img = img.convert('RGB')
+            # Tope de tamaño: para similitud no se necesita más, y recorta
+            # el payload al servicio (nginx ya bufferea a disco los grandes).
+            img.thumbnail((1600, 1600))
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG', quality=92)
+            contenido = buf.getvalue()
+        except Exception:
+            _logger.warning(
+                'Imagen de búsqueda no decodificable (mimetype=%s, %s bytes)',
+                archivo.mimetype, len(contenido))
+            return request.make_json_response({
+                'ok': False,
+                'error': 'Formato de imagen no soportado. '
+                         'Usa una foto JPG o PNG.',
+            })
+
         try:
             limite = int(kw.get('limite') or 24)
             r = requests.post(
                 '%s/buscar' % _base_url(),
                 params={'limite': limite},
-                files={'foto': (
-                    archivo.filename or 'consulta.jpg',
-                    contenido,
-                    archivo.mimetype or 'image/jpeg',
-                )},
+                files={'foto': ('consulta.jpg', contenido, 'image/jpeg')},
                 timeout=TIMEOUT,
             )
+            if r.status_code >= 400:
+                # El detalle del servicio va al log: sin esto el 400 era
+                # ciego y no se sabía QUÉ rechazó.
+                _logger.warning(
+                    'Visión respondió %s en /buscar: %s',
+                    r.status_code, (r.text or '')[:500])
             r.raise_for_status()
             datos = _enriquecer(r.json().get('resultados', []))
             return request.make_json_response({'ok': True, 'resultados': datos})
