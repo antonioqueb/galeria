@@ -135,22 +135,25 @@ class SomVisionController(http.Controller):
             buf = io.BytesIO()
             img.save(buf, format='JPEG', quality=92)
             contenido = buf.getvalue()
-        except Exception:
-            _logger.warning(
-                'Imagen de búsqueda no decodificable (mimetype=%s, %s bytes)',
-                archivo.mimetype, len(contenido))
-            return request.make_json_response({
-                'ok': False,
-                'error': 'Formato de imagen no soportado. '
-                         'Usa una foto JPG o PNG.',
-            })
+            nombre, tipo = 'consulta.jpg', 'image/jpeg'
+        except Exception as exc:  # noqa: BLE001
+            # El Pillow de Odoo no trae AVIF ni HEIC, y HEIC es el formato por
+            # omisión de las fotos de iPhone. Que Odoo no sepa leerlo NO es
+            # motivo para rechazar al usuario: el servicio de visión reconoce
+            # 75 formatos, así que se le manda el original y decide él. La
+            # transcodificación queda como optimización, no como requisito.
+            _logger.info(
+                'Sin transcodificar (%s, %s bytes): %s. Se envía el original.',
+                archivo.mimetype, len(contenido), exc)
+            nombre = archivo.filename or 'consulta.img'
+            tipo = archivo.mimetype or 'application/octet-stream'
 
         try:
             limite = int(kw.get('limite') or 24)
             r = requests.post(
                 '%s/buscar' % _base_url(),
                 params={'limite': limite},
-                files={'foto': ('consulta.jpg', contenido, 'image/jpeg')},
+                files={'foto': (nombre, contenido, tipo)},
                 timeout=TIMEOUT,
             )
             if r.status_code >= 400:
