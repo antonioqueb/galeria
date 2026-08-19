@@ -113,6 +113,10 @@ export class VisionSearch extends Component {
         const datos = new FormData();
         datos.append("foto", archivo);
         datos.append("limite", "24");
+        // Odoo protege con CSRF todas las rutas POST de tipo http. Sin este
+        // token la peticion se rechaza con 400 antes de llegar al controlador.
+        // Se manda el token en vez de desactivar la proteccion con csrf=False.
+        datos.append("csrf_token", odoo.csrf_token);
         try {
             const resp = await fetch("/som_vision/buscar_imagen", {
                 method: "POST",
