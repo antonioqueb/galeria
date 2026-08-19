@@ -64,7 +64,10 @@ def _enriquecer(resultados):
 
 class SomVisionController(http.Controller):
 
-    @http.route('/som_vision/estado', type='json', auth='user')
+    # Odoo 19: type='jsonrpc'. El antiguo type='json' sigue funcionando como
+    # alias, pero emite DeprecationWarning en cada arranque.
+
+    @http.route('/som_vision/estado', type='jsonrpc', auth='user')
     def estado(self):
         try:
             r = requests.get('%s/salud' % _base_url(), timeout=10)
@@ -74,7 +77,7 @@ class SomVisionController(http.Controller):
             _logger.warning('Visión no disponible: %s', exc)
             return {'ok': False, 'error': 'El servicio de búsqueda visual no responde'}
 
-    @http.route('/som_vision/buscar_texto', type='json', auth='user')
+    @http.route('/som_vision/buscar_texto', type='jsonrpc', auth='user')
     def buscar_texto(self, q='', limite=24):
         q = (q or '').strip()
         if len(q) < 2:
