@@ -42,6 +42,15 @@ def _enriquecer(resultados):
     lot_ids = [r['lot_id'] for r in resultados if r.get('lot_id')]
     lotes = request.env['stock.lot'].sudo().browse(lot_ids)
     lote_por_id = {l.id: l for l in lotes if l.exists()}
+    # Multiempresa: el servicio indexa fotos de todas; solo se muestran lotes
+    # de las compañías seleccionadas (o compartidos).
+    companies = request.env.companies
+    resultados = [r for r in resultados
+                  if not lote_por_id.get(r.get('lot_id'))
+                  or not lote_por_id[r['lot_id']].company_id
+                  or lote_por_id[r['lot_id']].company_id in companies]
+    if not resultados:
+        return []
 
     mejor = max((r.get('parecido') or 0) for r in resultados) or 1
 

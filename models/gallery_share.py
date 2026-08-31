@@ -96,20 +96,41 @@ class GalleryShare(models.Model):
     # CRUD / Computed fields
     # =========================================================
 
+    @api.model
+    def _som_next_sequence(self, code, company=None):
+        """next_by_code con la compañía del documento; si la compañía no tiene
+        secuencia propia y la plantilla es de otra compañía, se clona para ella."""
+        company = company or self.env.company
+        Seq = self.env['ir.sequence'].sudo()
+        name = Seq.with_company(company).next_by_code(code)
+        if name:
+            return name
+        template = Seq.search([('code', '=', code)], order='company_id', limit=1)
+        if not template:
+            return False
+        template.copy({
+            'company_id': company.id,
+            'number_next': 1,
+            'name': '%s (%s)' % (template.name, company.name),
+        })
+        return Seq.with_company(company).next_by_code(code)
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
+            # Compañía ANTES del folio: la secuencia se pide con la del documento.
+            if not vals.get('company_id'):
+                vals['company_id'] = self.env.company.id
+            company = self.env['res.company'].browse(vals['company_id'])
+
             if vals.get('name', 'Nuevo') == 'Nuevo':
-                vals['name'] = self.env['ir.sequence'].next_by_code('gallery.share') or 'CAT/0000'
+                vals['name'] = self._som_next_sequence('gallery.share', company) or 'CAT/0000'
 
             if not vals.get('expiration_date'):
                 # DOS MESES de vigencia: el catálogo se comparte con clientes
                 # que deciden con calma; expirar a los pocos días mataba
                 # ligas aún en uso comercial.
                 vals['expiration_date'] = fields.Datetime.now() + timedelta(days=60)
-
-            if not vals.get('company_id'):
-                vals['company_id'] = self.env.company.id
 
         return super(GalleryShare, self).create(vals_list)
 
@@ -486,7 +507,8 @@ class GalleryShare(models.Model):
         self.ensure_one()
 
         price_unit = 0.0
-        tmpl = product.product_tmpl_id
+        # x_price_usd_1 es company_dependent: se lee con la compañía del catálogo.
+        tmpl = product.product_tmpl_id.with_company(self.company_id)
 
         if 'x_price_usd_1' in tmpl._fields:
             price_unit = tmpl.x_price_usd_1 or 0.0
@@ -567,7 +589,7 @@ class GalleryShare(models.Model):
                 # reacomodo, no un compromiso comercial), se libera sola y
                 # se recalcula. Helper de inventory_shopping_cart; hasattr
                 # por si no está instalado.
-                Picking = self.env['stock.picking'].sudo()
+                Picking = self.env['stock.picking'].with_company(self.company_id).sudo()
                 if hasattr(Picking, '_release_cart_internal_reservations'):
                     released = Picking._release_cart_internal_reservations(
                         [quant.lot_id.id],

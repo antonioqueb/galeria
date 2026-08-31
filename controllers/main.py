@@ -72,6 +72,7 @@ class GalleryController(http.Controller):
                 ], limit=1)
                 if candidate:
                     weak_lines = request.env['stock.move.line'].sudo().search([
+                        ('company_id', '=', share.company_id.id),
                         ('product_id', '=', candidate.product_id.id),
                         ('lot_id', '=', lot.id),
                         ('location_id', '=', candidate.location_id.id),

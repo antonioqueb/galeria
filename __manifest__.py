@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Galería de Placas y Catálogo Compartido',
-    'version': '19.0.3.6.0',
+    'version': '19.0.3.7.0',
     'category': 'Sales/Sales',
     'summary': 'Selección visual de placas, carrito de reservas y catálogo público',
     'description': """
@@ -16,6 +16,7 @@
     'depends': ['base', 'web', 'stock', 'stock_lot_dimensions', 'inventory_shopping_cart', 'inventory_visual_enhanced'],
     'data': [
         'security/ir.model.access.csv',
+        'security/multi_company_rules.xml',
         'data/gallery_sequence.xml',
         'views/gallery_share_views.xml',
         'views/gallery_menus.xml',
